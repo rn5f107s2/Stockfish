@@ -657,7 +657,7 @@ bool Position::gives_check(Move m) const {
   case EN_PASSANT:
   {
       Square capsq = make_square(file_of(to), rank_of(from));
-      Bitboard b = (pieces() ^ from ^ capsq) | to;
+      Bitboard b = pieces() ^ from ^ capsq;
 
       return  (attacks_bb<  ROOK>(square<KING>(~sideToMove), b) & pieces(sideToMove, QUEEN, ROOK))
             | (attacks_bb<BISHOP>(square<KING>(~sideToMove), b) & pieces(sideToMove, QUEEN, BISHOP));
