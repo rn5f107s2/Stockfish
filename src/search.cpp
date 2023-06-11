@@ -548,7 +548,7 @@ namespace {
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
-    int moveCount, captureCount, quietCount, improvement;
+    int moveCount, captureCount, quietCount, improvement, bestMChanges;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -918,6 +918,7 @@ moves_loop: // When in check, search starts here
 
     value = bestValue;
     moveCountPruning = singularQuietLMR = false;
+    bestMChanges = 0;
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal or greater than the current depth, and the result of this search was a fail low.
@@ -1161,6 +1162,9 @@ moves_loop: // When in check, search starts here
       if (singularQuietLMR)
           r--;
 
+      if (rootNode && bestMChanges && depth > 5)
+          r += bestMChanges;
+
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
           r++;
@@ -1288,7 +1292,10 @@ moves_loop: // When in check, search starts here
               // we must take care to only do this for the first PV line.
               if (   moveCount > 1
                   && !thisThread->pvIdx)
-                  ++thisThread->bestMoveChanges;
+                {
+                    ++thisThread->bestMoveChanges;
+                    bestMChanges++;
+                }
           }
           else
               // All other moves but the PV are set to the lowest value: this
