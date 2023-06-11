@@ -545,7 +545,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
+    bool givesCheck, improving, priorCapture, singularQuietLMR, newBestMove;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -917,7 +917,7 @@ moves_loop: // When in check, search starts here
                                       ss->killers);
 
     value = bestValue;
-    moveCountPruning = singularQuietLMR = false;
+    moveCountPruning = singularQuietLMR = newBestMove = false;
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal or greater than the current depth, and the result of this search was a fail low.
@@ -1161,6 +1161,9 @@ moves_loop: // When in check, search starts here
       if (singularQuietLMR)
           r--;
 
+      if (rootNode && newBestMove && depth > 10)
+          r += 1 + moveCount > 3;
+
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
           r++;
@@ -1288,7 +1291,10 @@ moves_loop: // When in check, search starts here
               // we must take care to only do this for the first PV line.
               if (   moveCount > 1
                   && !thisThread->pvIdx)
-                  ++thisThread->bestMoveChanges;
+                {
+                    ++thisThread->bestMoveChanges;
+                    newBestMove = true;
+                }
           }
           else
               // All other moves but the PV are set to the lowest value: this
