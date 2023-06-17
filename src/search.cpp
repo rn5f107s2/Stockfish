@@ -549,6 +549,7 @@ namespace {
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
+    bool nullFail = false;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -819,7 +820,8 @@ namespace {
 
             if (v >= beta)
                 return nullValue;
-        }
+        }else
+            nullFail = true;
     }
 
     // Step 10. If the position doesn't have a ttMove, decrease depth by 2
@@ -1162,6 +1164,9 @@ moves_loop: // When in check, search starts here
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
+          r--;
+
+      if (nullFail && bestValue < alpha && moveCount > 2)
           r--;
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
