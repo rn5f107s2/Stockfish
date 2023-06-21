@@ -759,9 +759,14 @@ namespace {
     // return a fail low.
     if (eval < alpha - 456 - 252 * depth * depth)
     {
+        bool noTTm = ttMove == MOVE_NONE;
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
+        if(noTTm && (tte->move() != MOVE_NONE)){
+            ttMove = tte->move();
+            ttCapture = pos.capture_stage(ttMove);
+        }
     }
 
     // Step 8. Futility pruning: child node (~40 Elo).
