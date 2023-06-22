@@ -504,6 +504,11 @@ void Thread::search() {
                 skill.best ? skill.best : skill.pick_best(multiPV)));
 }
 
+int r1 = 274; // = 456 - 182 changing r1 should have the same result as adjusting the eval adjustment
+int r2 = 252;
+
+TUNE(SetRange(1, 1250), r1, r2);
+
 
 namespace {
 
@@ -905,7 +910,7 @@ moves_loop: // When in check, search starts here
 
     if(   ss->inCheck
        && (ss-1)->staticEval != VALUE_NONE
-       && (-(ss-1)->staticEval - 182) < alpha - 456 - 252 * depth * depth)
+       && (-(ss-1)->staticEval) < alpha - r1 - r2 * depth * depth)
        {
             value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
             if(value < alpha)
