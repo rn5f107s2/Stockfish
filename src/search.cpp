@@ -903,6 +903,20 @@ moves_loop: // When in check, search starts here
         && abs(beta) <= VALUE_KNOWN_WIN)
         return probCutBeta;
 
+    if(   ss->inCheck
+      && (ss-1)->staticEval != VALUE_NONE
+      && std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss-1)->staticEval - 182) < alpha - 456 - 252 * depth * depth
+      &&    (!ttCapture 
+         ||    (ss->ttHit
+            &&  tte->depth() >= depth
+            &&  tte->bound() & BOUND_UPPER
+            &&  !rootNode)))
+    {
+        value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
+        if(value < alpha)
+            return value;
+    }
+
     const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
                                           nullptr                   , (ss-4)->continuationHistory,
                                           nullptr                   , (ss-6)->continuationHistory };
