@@ -67,14 +67,14 @@ namespace {
     return Value(140 * (d - improving));
   }
 
-  int r2[] = {252, 252, 252, 252, 252, 252};
-  int r1[] = {456, 456, 456, 456, 456, 456};
+  int r2[] = {252, 252, 252, 252, 252};
+  int r1[] = {456, 456, 456, 456, 456};
 
   TUNE(SetRange(1, 999), r1, r2);
 
   template<bool Pv>
-  Value razor_margin(bool cutNode, bool mayFailLow, bool likelyFailLow, bool veryLikelyFailLow, Depth depth){
-    int idx = Pv * 2 + mayFailLow + likelyFailLow + veryLikelyFailLow + cutNode;
+  Value razor_margin(bool cutNode, bool likelyFailLow, bool veryLikelyFailLow, Depth depth){
+    int idx = Pv * 2 + likelyFailLow + veryLikelyFailLow + cutNode;
     return Value(r1[idx] + r2[idx] * depth * depth);
   }
 
@@ -556,7 +556,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow, mayFailLow;
+    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -715,12 +715,6 @@ namespace {
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal or greater than the current depth, and the result of this search was a fail low.
-    mayFailLow =   PvNode
-                && (tte->bound() & BOUND_UPPER)
-                && tte->depth() >= depth;
-
-    // Indicate PvNodes that will probably fail low if the node was searched
-    // at a depth equal or greater than the current depth, and the result of this search was a fail low.
     likelyFailLow =    PvNode
                     && ttMove
                     && (tte->bound() & BOUND_UPPER)
@@ -781,7 +775,7 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode , mayFailLow , likelyFailLow , likelyFailLow && ttValue <= alpha, depth))
+    if (eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode, likelyFailLow, likelyFailLow && ttValue <= alpha, depth))
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
