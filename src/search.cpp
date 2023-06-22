@@ -556,7 +556,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow;
+    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow, mayFailLow;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -715,9 +715,16 @@ namespace {
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal or greater than the current depth, and the result of this search was a fail low.
-    bool mayFailLow =    PvNode
-                         && (tte->bound() & BOUND_UPPER)
-                         && tte->depth() >= depth;
+    mayFailLow =   PvNode
+                && (tte->bound() & BOUND_UPPER)
+                && tte->depth() >= depth;
+
+    // Indicate PvNodes that will probably fail low if the node was searched
+    // at a depth equal or greater than the current depth, and the result of this search was a fail low.
+    likelyFailLow =    PvNode
+                    && ttMove
+                    && (tte->bound() & BOUND_UPPER)
+                    && tte->depth() >= depth;
 
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
@@ -774,7 +781,7 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode , mayFailLow , likelyFailLow = mayFailLow && ttMove, likelyFailLow && ttValue <= alpha, depth))
+    if (eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode , mayFailLow , likelyFailLow , likelyFailLow && ttValue <= alpha, depth))
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
@@ -925,12 +932,6 @@ moves_loop: // When in check, search starts here
                                           nullptr                   , (ss-4)->continuationHistory,
                                           nullptr                   , (ss-6)->continuationHistory };
 
-    // Indicate PvNodes that will probably fail low if the node was searched
-    // at a depth equal or greater than the current depth, and the result of this search was a fail low.
-    likelyFailLow =    PvNode
-                    && ttMove
-                    && (tte->bound() & BOUND_UPPER)
-                    && tte->depth() >= depth;
 
     Move countermove = prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : MOVE_NONE;
 
