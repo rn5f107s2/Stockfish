@@ -67,15 +67,27 @@ namespace {
     return Value(140 * (d - improving));
   }
 
-  int r2[] = {252, 252, 252, 252, 252};
-  int r1[] = {456, 456, 456, 456, 456};
+  int razoringValues[12][6] = {
+    {708, 708, 708, 708, 708, 708},
+    {1464, 1464, 1464, 1464, 1464, 1464},
+    {2724, 2724, 2724, 2724, 2724, 2724},
+    {4488, 4488, 4488, 4488, 4488, 4488},
+    {6756, 6756, 6756, 6756, 6756, 6756},
+    {9528, 9528, 9528, 9528, 9528, 9528},
+    {12804, 12804, 12804, 12804, 12804, 12804},
+    {16584, 16584, 16584, 16584, 16584, 16584},
+    {20868, 20868, 20868, 20868, 20868, 20868},
+    {25656, 25656, 25656, 25656, 25656, 25656},
+    {30948, 30948, 30948, 30948, 30948, 30948},
+    {36744, 36744, 36744, 36744, 36744, 36744}
+  };
 
-  TUNE(SetRange(1, 999), r1, r2);
+  TUNE(SetRange(1, 20000), razoringValues);
 
   template<bool Pv>
-  Value razor_margin(bool cutNode, bool likelyFailLow, bool veryLikelyFailLow, Depth depth){
-    int idx = Pv * 2 + likelyFailLow + veryLikelyFailLow + cutNode;
-    return Value(r1[idx] + r2[idx] * depth * depth);
+  Value razor_margin(bool cutNode, bool mayFailLow, bool likelyFailLow, bool veryLikelyFailLow, Depth depth){
+    int idx = Pv * 2 + likelyFailLow + mayFailLow + veryLikelyFailLow + cutNode;
+    return Value(razoringValues[depth - 1][idx]);
   }
 
   // Reductions lookup table, initialized at startup
@@ -556,7 +568,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow;
+    bool givesCheck, improving, priorCapture, singularQuietLMR, likelyFailLow, mayFailLow;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -713,13 +725,13 @@ namespace {
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
 
+    mayFailLow =   PvNode
+                && (tte->bound() & BOUND_UPPER)
+                && tte->depth() >= depth;
+
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal or greater than the current depth, and the result of this search was a fail low.
-    likelyFailLow =    PvNode
-                    && ttMove
-                    && (tte->bound() & BOUND_UPPER)
-                    && tte->depth() >= depth;
-
+    likelyFailLow = mayFailLow && ttMove;
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
     {
@@ -775,7 +787,8 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode, likelyFailLow, likelyFailLow && ttValue <= alpha, depth))
+    if (   depth <= 12 
+        && eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode, mayFailLow, likelyFailLow, likelyFailLow && ttValue <= alpha , depth))
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
