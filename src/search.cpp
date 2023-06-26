@@ -957,6 +957,7 @@ moves_loop: // When in check, search starts here
 
       extension = 0;
       capture = pos.capture_stage(move);
+      ss->capturee = capture;
       movedPiece = pos.moved_piece(move);
       givesCheck = pos.gives_check(move);
 
@@ -1154,6 +1155,9 @@ moves_loop: // When in check, search starts here
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
           r++;
+
+      if (!(ss-2)->capturee && priorCapture && !capture && (ttCapture || likelyFailLow))
+          r ++;
 
       // Decrease reduction for PvNodes based on depth (~2 Elo)
       if (PvNode)
