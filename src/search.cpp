@@ -67,25 +67,26 @@ namespace {
     return Value(140 * (d - improving));
   }
 
-  int razoringValues[12][3] = {
+  int razoringValues[11][3] = {
     {708, 708, 708},
     {1464, 1464, 1464},
-    {2724, 2724, 2724},
-    {4488, 4488, 4488},
-    {6756, 6756, 6756},
-    {9528, 9528, 9528},
+    {4591, 4591, 4591},
+    {6921, 6921, 6921},
+    {6384, 6384, 6384},
+    {6540, 6540, 6540},
     {12804, 12804, 12804},
     {16584, 16584, 16584},
     {20868, 20868, 20868},
     {25656, 25656, 25656},
     {30948, 30948, 30948},
-    {36744, 36744, 36744}
   };
 
   TUNE(SetRange(1, 40000), razoringValues);
 
-  template<bool Pv>
   Value razor_margin(bool cutNode, bool likelyFailLow, Depth depth){
+    assert(!(likelyFailLow && cutNode));
+    assert(depth > 0);
+
     int idx = likelyFailLow * 2 + cutNode;
     return Value(razoringValues[depth - 1][idx]);
   }
@@ -787,12 +788,9 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (   depth <= 12 
-        && eval < alpha - razor_margin<nodeType == PV>(!PvNode && cutNode, likelyFailLow, depth))
+    if (   depth <= 11 
+        && eval < alpha - razor_margin(cutNode, likelyFailLow, depth))
     {
-        if(PvNode && !likelyFailLow){
-            std::cout << "HERE\n";
-        }
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
