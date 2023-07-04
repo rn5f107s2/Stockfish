@@ -855,7 +855,12 @@ namespace {
     {
         assert(probCutBeta < VALUE_INFINITE);
 
-        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
+        bool useTTM =  pos.capture_stage(ttMove)
+                     || ((   ttValue >= probCutBeta + 300) 
+                          && (tte->depth() >= depth - 2) 
+                          && (ttValue != VALUE_NONE));
+
+        MovePicker mp(pos, useTTM ? ttMove : MOVE_NONE, probCutBeta - ss->staticEval, &captureHistory);
 
         while ((move = mp.next_move()) != MOVE_NONE)
             if (move != excludedMove && pos.legal(move))
