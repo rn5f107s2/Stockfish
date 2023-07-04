@@ -291,7 +291,7 @@ namespace {
     Evaluation() = delete;
     explicit Evaluation(const Position& p) : pos(p) {}
     Evaluation& operator=(const Evaluation&) = delete;
-    Value value();
+    Value value(Value beta = VALUE_NONE);
 
   private:
     template<Color Us> void initialize();
@@ -964,9 +964,12 @@ namespace {
   // of view of the side to move.
 
   template<Tracing T>
-  Value Evaluation<T>::value() {
+  Value Evaluation<T>::value(Value beta) {
 
     assert(!pos.checkers());
+
+    Value lazyThresholdThis1 = std::min(beta + LazyThreshold1, LazyThreshold1);
+    Value lazyThresholdThis2 = std::min(beta + LazyThreshold2, LazyThreshold2);
 
     // Probe the material hash table
     me = Material::probe(pos);
@@ -992,7 +995,7 @@ namespace {
                                                         + pos.non_pawn_material() / 32;
     };
 
-    if (lazy_skip(LazyThreshold1))
+    if (lazy_skip(lazyThresholdThis1))
         goto make_v;
 
     // Main evaluation begins here
@@ -1012,7 +1015,7 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + passed< WHITE>() - passed< BLACK>();
 
-    if (lazy_skip(LazyThreshold2))
+    if (lazy_skip(lazyThresholdThis2))
         goto make_v;
 
     score +=  threats<WHITE>() - threats<BLACK>()
@@ -1045,8 +1048,7 @@ make_v:
 
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
-
-Value Eval::evaluate(const Position& pos) {
+Value Eval::evaluate(const Position& pos, Value beta) {
 
   assert(!pos.checkers());
 
@@ -1058,8 +1060,9 @@ Value Eval::evaluate(const Position& pos) {
   // PSQ advantage is decisive. (~4 Elo at STC, 1 Elo at LTC)
   bool useClassical = !useNNUE || abs(psq) > 2048;
 
-  if (useClassical)
-      v = Evaluation<NO_TRACE>(pos).value();
+  if (useClassical){
+    v = Evaluation<NO_TRACE>(pos).value(beta);
+  }
   else
   {
       int nnueComplexity;
