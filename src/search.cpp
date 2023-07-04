@@ -855,13 +855,18 @@ namespace {
     {
         assert(probCutBeta < VALUE_INFINITE);
 
-        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
+        bool useTTM =  (   pos.capture_stage(ttMove)
+                        && pos.see_ge(ttMove, probCutBeta - ss->staticEval))
+                     || ((   ttValue >= probCutBeta + 300) 
+                          && (tte->depth() >= depth - 3) 
+                          && pos.see_ge(ttMove, Value(0))
+                          && (ttValue != VALUE_NONE));
+
+        MovePicker mp(pos, useTTM ? ttMove : MOVE_NONE, probCutBeta - ss->staticEval, &captureHistory);
 
         while ((move = mp.next_move()) != MOVE_NONE)
             if (move != excludedMove && pos.legal(move))
             {
-                assert(pos.capture_stage(move));
-
                 ss->currentMove = move;
                 ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck]
                                                                           [true]
@@ -870,8 +875,11 @@ namespace {
 
                 pos.do_move(move, st);
 
+                value = probCutBeta;
+
                 // Perform a preliminary qsearch to verify that the move holds
-                value = -qsearch<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1);
+                if (pos.capture_stage(move))
+                    value = -qsearch<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1);
 
                 // If the qsearch held, perform the regular search
                 if (value >= probCutBeta)
