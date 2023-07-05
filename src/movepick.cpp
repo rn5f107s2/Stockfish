@@ -92,7 +92,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 {
   assert(!pos.checkers());
 
-  stage = PROBCUT_TT + !(ttm && pos.capture_stage(ttm)
+  stage = PROBCUT_TT + !(ttm && (   pos.capture_stage(ttm)
+                                 || pos.gives_check(ttm))
                              && pos.pseudo_legal(ttm)
                              && pos.see_ge(ttm, threshold));
 }
