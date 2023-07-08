@@ -543,10 +543,11 @@ namespace {
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
-    Depth extension, newDepth;
+    Depth extension, newDepth, probReduction, probCutDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
+    bool highDepth, highStatic;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
 
@@ -839,6 +840,12 @@ namespace {
 
     probCutBeta = beta + 168 - 61 * improving;
 
+    highDepth    = depth >= 12;
+    highStatic   = ss->staticEval + improvement >= probCutBeta;
+
+    probReduction = 3 + highDepth + highStatic;
+    probCutDepth = std::max(depth - probReduction, 1);
+
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
@@ -849,7 +856,7 @@ namespace {
         // there and in further interactions with transposition table cutoff depth is set to depth - 3
         // because probCut search has depth set to depth - 4 but we also do a move before it
         // So effective depth is equal to depth - 3
-        && !(   tte->depth() >= depth - 3
+        && !(   tte->depth() >= probCutDepth
              && ttValue != VALUE_NONE
              && ttValue < probCutBeta))
     {
@@ -875,14 +882,14 @@ namespace {
 
                 // If the qsearch held, perform the regular search
                 if (value >= probCutBeta)
-                    value = -search<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1, depth - 4, !cutNode);
+                    value = -search<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1, probCutDepth - 1, !cutNode);
 
                 pos.undo_move(move);
 
                 if (value >= probCutBeta)
                 {
                     // Save ProbCut data into transposition table
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
+                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, probCutDepth, move, ss->staticEval);
                     return value;
                 }
             }
