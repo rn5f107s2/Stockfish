@@ -856,7 +856,7 @@ namespace {
         assert(probCutBeta < VALUE_INFINITE);
 
         bool useTTM =   pos.capture_stage(ttMove)
-                     || pos.gives_check(move)
+                     || pos.gives_check(ttMove)
                      || ((   ttValue >= probCutBeta + 500) 
                           && (tte->depth() >= depth - 3) 
                           && (ttValue != VALUE_NONE));
