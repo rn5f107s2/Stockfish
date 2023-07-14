@@ -1139,7 +1139,7 @@ moves_loop: // When in check, search starts here
                                                                 [to_sq(move)];
 
       // Step 16. Make the move
-      pos.do_move(move, st, givesCheck);
+      pos.do_move(move, st, givesCheck)
 
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
@@ -1184,11 +1184,21 @@ moves_loop: // When in check, search starts here
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
+      if (   !PvNode
+          && givesCheck
+          && eval > beta + 456 + 252 * (depth - 1) * (depth - 1)
+          && depth < 10
+          && pos.see_ge(move, Value(0))
+          value = -qsearch<NonPV>(pos, ss, -beta, -beta+1);
+      else
+          value = -VALUE_INFINITE;
+        
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
       // been searched. In general, we would like to reduce them, but there are many
       // cases where we extend a son if it has good chances to be "interesting".
-      if (    depth >= 2
+      else if (    depth >= 2
+          &&  value < beta
           &&  moveCount > 1 + (PvNode && ss->ply <= 1)
           && (   !ss->ttPv
               || !capture
