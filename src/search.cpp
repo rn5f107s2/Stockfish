@@ -702,16 +702,7 @@ namespace {
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
 
-    // Step 6. Static evaluation of the position
-    if (ss->inCheck)
-    {
-        // Skip early pruning when in check
-        ss->staticEval = eval = VALUE_NONE;
-        improving = false;
-        improvement = 0;
-        goto moves_loop;
-    }
-    else if (excludedMove)
+    if (excludedMove)
     {
         // Providing the hint that this node's accumulator will be used often brings significant Elo gain (13 Elo)
         Eval::NNUE::hint_common_parent_position(pos);
@@ -775,6 +766,7 @@ namespace {
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
+        && !ss->inCheck
         && (ss-1)->currentMove != MOVE_NULL
         && (ss-1)->statScore < 17329
         &&  eval >= beta
@@ -837,6 +829,9 @@ namespace {
         && !ttMove)
         depth -= 2;
 
+    if(ss->inCheck)
+        goto moves_loop;
+
     probCutBeta = beta + 168 - 61 * improving;
 
     // Step 11. ProbCut (~10 Elo)
@@ -890,7 +885,7 @@ namespace {
         Eval::NNUE::hint_common_parent_position(pos);
     }
 
-moves_loop: // When in check, search starts here
+    moves_loop: // When in check, search starts here
 
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
     probCutBeta = beta + 413;
