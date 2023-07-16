@@ -836,6 +836,16 @@ namespace {
         && !ttMove)
         depth -= 2;
 
+    probCutBeta = beta + 413;
+    if (   !PvNode
+        && ttCapture
+        && (tte->bound() & BOUND_LOWER)
+        && tte->depth() >= depth - 4
+        && ttValue >= probCutBeta
+        && abs(ttValue) <= VALUE_KNOWN_WIN
+        && abs(beta) <= VALUE_KNOWN_WIN)
+        return probCutBeta;
+
     probCutBeta = beta + 168 - 61 * improving;
 
     // Step 11. ProbCut (~10 Elo)
