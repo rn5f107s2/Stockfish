@@ -34,7 +34,8 @@ enum GenType {
   QUIET_CHECKS,
   EVASIONS,
   NON_EVASIONS,
-  LEGAL
+  LEGAL,
+  CAP_EVASIONS
 };
 
 struct ExtMove {

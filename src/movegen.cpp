@@ -76,7 +76,7 @@ namespace {
         Bitboard b1 = shift<Up>(pawnsNotOn7)   & emptySquares;
         Bitboard b2 = shift<Up>(b1 & TRank3BB) & emptySquares;
 
-        if constexpr (Type == EVASIONS) // Consider only blocking squares
+        if constexpr (Type == EVASIONS || Type == CAP_EVASIONS) // Consider only blocking squares
         {
             b1 &= target;
             b2 &= target;
@@ -196,16 +196,16 @@ namespace {
 
     constexpr bool Checks = Type == QUIET_CHECKS; // Reduce template instantiations
     const Square ksq = pos.square<KING>(Us);
-    Bitboard target;
-
+    Bitboard target = Type == EVASIONS     ?  between_bb(ksq, lsb(pos.checkers()))
+                    : Type == NON_EVASIONS ? ~pos.pieces( Us)
+                    : Type == CAPTURES     ?  pos.pieces(~Us)
+                    : Type == CAP_EVASIONS ?  pos.pieces(~Us) & between_bb(ksq, lsb(pos.checkers()))
+                                           : ~pos.pieces(   ); // QUIETS || QUIET_CHECKS
+                                      
+                                    
     // Skip generating non-king moves when in double check
-    if (Type != EVASIONS || !more_than_one(pos.checkers()))
+    if ((Type != EVASIONS && Type != CAP_EVASIONS) || !more_than_one(pos.checkers()))
     {
-        target = Type == EVASIONS     ?  between_bb(ksq, lsb(pos.checkers()))
-               : Type == NON_EVASIONS ? ~pos.pieces( Us)
-               : Type == CAPTURES     ?  pos.pieces(~Us)
-                                      : ~pos.pieces(   ); // QUIETS || QUIET_CHECKS
-
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
         moveList = generate_moves<Us, KNIGHT, Checks>(pos, moveList, target);
         moveList = generate_moves<Us, BISHOP, Checks>(pos, moveList, target);
@@ -260,6 +260,7 @@ template ExtMove* generate<QUIETS>(const Position&, ExtMove*);
 template ExtMove* generate<EVASIONS>(const Position&, ExtMove*);
 template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*);
 template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*);
+template ExtMove* generate<CAP_EVASIONS>(const Position&, ExtMove*);
 
 
 /// generate<LEGAL> generates all the legal moves in the given position
