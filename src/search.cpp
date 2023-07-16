@@ -836,6 +836,8 @@ namespace {
         && !ttMove)
         depth -= 2;
 
+moves_loop: // When in check, search starts here
+
     probCutBeta = beta + 168 - 61 * improving;
 
     // Step 11. ProbCut (~10 Elo)
@@ -889,19 +891,7 @@ namespace {
         Eval::NNUE::hint_common_parent_position(pos);
     }
 
-moves_loop: // When in check, search starts here
-
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
-    probCutBeta = beta + 413;
-    if (   ss->inCheck
-        && !PvNode
-        && ttCapture
-        && (tte->bound() & BOUND_LOWER)
-        && tte->depth() >= depth - 4
-        && ttValue >= probCutBeta
-        && abs(ttValue) <= VALUE_KNOWN_WIN
-        && abs(beta) <= VALUE_KNOWN_WIN)
-        return probCutBeta;
 
     const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
                                           nullptr                   , (ss-4)->continuationHistory,
