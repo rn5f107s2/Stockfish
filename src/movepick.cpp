@@ -28,7 +28,7 @@ namespace {
   enum Stages {
     MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
     EVASION_TT, EVASION_INIT, EVASION,
-    PROBCUT_TT, PROBCUT_INIT, PROBCUT,
+    PROBCUT_TT, PROB_PRE_INIT, PROBCUT_INIT, PROBCUT,
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
@@ -184,10 +184,11 @@ top:
       return ttMove;
 
   case CAPTURE_INIT:
-  case PROBCUT_INIT:
   case QCAPTURE_INIT:
       cur = endBadCaptures = moves;
       endMoves = generate<CAPTURES>(pos, cur);
+      [[fallthrough]];
+   case PROBCUT_INIT:
 
       score<CAPTURES>();
       partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
@@ -286,6 +287,13 @@ top:
 
   case QCHECK:
       return select<Next>([](){ return true; });
+  case PROB_PRE_INIT:
+       cur = endBadCaptures = moves;
+       endMoves = !pos.checkers() ? generate<CAPTURES>(pos, cur)
+                                 : generate<CAP_EVASIONS>(pos, cur);
+
+       ++stage;
+       goto top;
   }
 
   assert(false);
