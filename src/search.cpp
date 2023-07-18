@@ -542,9 +542,9 @@ namespace {
 
     TTEntry* tte;
     Key posKey;
-    Move ttMove, move, excludedMove, bestMove;
+    Move ttMove, move, excludedMove, bestMove, probMove;
     Depth extension, newDepth;
-    Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, probTTMScore;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
@@ -558,6 +558,7 @@ namespace {
     moveCount          = captureCount = quietCount = ss->moveCount = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
+    probMove           = MOVE_NONE;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -838,6 +839,8 @@ namespace {
 
     probCutBeta = beta + 168 - 61 * improving;
 
+    probTTMScore = beta + 120;
+
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
@@ -853,6 +856,8 @@ namespace {
              && ttValue < probCutBeta))
     {
         assert(probCutBeta < VALUE_INFINITE);
+
+        value = VALUE_NONE;
 
         MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
 
@@ -884,7 +889,22 @@ namespace {
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
                     return value;
                 }
+
+                if (value > probTTMScore)
+                {
+                    probTTMScore = value;
+                    probMove = move;
+                }
             }
+
+        if (probMove != MOVE_NONE && (depth - 3) > tte->depth()) 
+        {
+            ttValue   = probTTMScore;
+            ttMove    = probMove;
+            ttCapture = true;
+
+            tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
+        }
 
         Eval::NNUE::hint_common_parent_position(pos);
     }
