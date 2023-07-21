@@ -105,11 +105,10 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
+  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces, discoveredCheckers;
+  [[maybe_unused]] Color us = pos.side_to_move();
   if constexpr (Type == QUIETS)
   {
-      Color us = pos.side_to_move();
-
       threatenedByPawn  = pos.attacks_by<PAWN>(~us);
       threatenedByMinor = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
       threatenedByRook  = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
@@ -118,9 +117,13 @@ void MovePicker::score() {
       threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      discoveredCheckers = pos.blockers_for_king(~us);
   }
 
   for (auto& m : *this)
+  {
+    [[maybe_unused]]  bool discoveredCheck = (discoveredCheckers & from_sq(m)) && !aligned(from_sq(m), to_sq(m), pos.square<KING>(~us));
       if constexpr (Type == CAPTURES)
           m.value =  (7 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
                    +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
@@ -137,7 +140,7 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+                   +     (bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) || discoveredCheck) * 16384;
       else // Type == EVASIONS
       {
           if (pos.capture_stage(m))
@@ -148,6 +151,7 @@ void MovePicker::score() {
               m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
+  }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
