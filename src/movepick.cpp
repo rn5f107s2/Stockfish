@@ -121,6 +121,8 @@ void MovePicker::score() {
   }
 
   for (auto& m : *this)
+  {
+    [[maybe_unused]] bool check = bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m));
       if constexpr (Type == CAPTURES)
           m.value =  (7 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
                    +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
@@ -135,9 +137,9 @@ void MovePicker::score() {
                            (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
                           : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
-                          :                                                                           0)
-                          :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+                          :                                       -PieceValue[MG][pos.piece_on(from_sq(m))])
+                          : threatenedPieces && !check  ?                                        -15000 : 0)
+                   +     check * 16384;
       else // Type == EVASIONS
       {
           if (pos.capture_stage(m))
@@ -148,6 +150,7 @@ void MovePicker::score() {
               m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
+  }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
