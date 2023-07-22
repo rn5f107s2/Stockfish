@@ -544,9 +544,9 @@ namespace {
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
-    Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, qValue;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
-    bool capture, moveCountPruning, ttCapture;
+    bool capture, moveCountPruning, ttCapture, fullDepth;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -861,6 +861,10 @@ namespace {
             {
                 assert(pos.capture_stage(move));
 
+                fullDepth = false;
+
+                value = -VALUE_INFINITE;
+
                 ss->currentMove = move;
                 ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck]
                                                                           [true]
@@ -870,15 +874,21 @@ namespace {
                 pos.do_move(move, st);
 
                 // Perform a preliminary qsearch to verify that the move holds
-                value = -qsearch<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1);
+                qValue = -qsearch<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1);
 
                 // If the qsearch held, perform the regular search
-                if (value >= probCutBeta)
+                if (qValue >= probCutBeta)
                     value = -search<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1, depth - 4, !cutNode);
 
                 pos.undo_move(move);
 
-                if (value >= probCutBeta)
+                if (value > (beta + 100) && value < probCutBeta){
+                    value = -search<NonPV>(pos, ss+1, -beta, -beta+1, depth - 1, !cutNode);
+                    fullDepth = true;
+                }
+
+
+                if (value >= probCutBeta || (value > beta && fullDepth))
                 {
                     // Save ProbCut data into transposition table
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
