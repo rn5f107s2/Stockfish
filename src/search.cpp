@@ -544,7 +544,7 @@ namespace {
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
-    Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, placeHolder, probCutMargin;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
@@ -836,7 +836,9 @@ namespace {
         && !ttMove)
         depth -= 2;
 
-    probCutBeta = beta + 168 - 61 * improving;
+    placeHolder = Value(depth <= 6 ? (7 - depth) * 40 : depth >= 10 ? std::max(-15 * (depth - 9), -110) : 0);  
+    probCutMargin = Value(168 + placeHolder);
+    probCutBeta = beta + probCutMargin - (probCutMargin / 3) * improving;
 
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
