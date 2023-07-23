@@ -105,7 +105,8 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
+  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedByQueen, threatenedPieces;
+  [[maybe_unused]] Bitboard undefendedSquares, defended;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -113,11 +114,22 @@ void MovePicker::score() {
       threatenedByPawn  = pos.attacks_by<PAWN>(~us);
       threatenedByMinor = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
       threatenedByRook  = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+      threatenedByQueen = pos.attacks_by<QUEEN>(~us) | threatenedByRook;
+
+      defended =   pos.attacks_by<PAWN>(us)
+                 | pos.attacks_by<KNIGHT>(us)
+                 | pos.attacks_by<BISHOP>(us)
+                 | pos.attacks_by<ROOK>(us)
+                 | pos.attacks_by<QUEEN>(us)
+                 | pos.attacks_by<KING>(us);
+      //if there is a function for this I didnt find it
 
       // Pieces threatened by pieces of lesser material value
       threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      undefendedSquares = threatenedByQueen & (~defended);
   }
 
   for (auto& m : *this)
@@ -131,7 +143,7 @@ void MovePicker::score() {
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   +     (threatenedPieces & from_sq(m) ?
+                   +     (threatenedPieces & from_sq(m) || (undefendedSquares & from_sq(m) && !(undefendedSquares & to_sq(m))) ?
                            (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
                           : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
