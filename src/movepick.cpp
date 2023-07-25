@@ -36,7 +36,7 @@ namespace {
  constexpr Bitboard BadKnightSquaresBlack = (BadKnightSquaresWhite | Rank4BB) & ~Rank5BB;
 // h/a 4/5 are common squares to atttack bishops on f/c 4/5 
 
- constexpr Bitboard BadKnightSquares[2] = {BadKnightSquaresWhite, BadKnightSquaresBlack};
+ constexpr Bitboard BadKnightSquares[] = {BadKnightSquaresWhite, BadKnightSquaresBlack};
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
