@@ -106,6 +106,7 @@ void MovePicker::score() {
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
   [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
+  [[maybe_unused]] int nonCastlingKingMovePenalty;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -118,6 +119,12 @@ void MovePicker::score() {
       threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      int gameStageWeight = pos.non_pawn_material() + bool(pos.pieces(~us, QUEEN)) * 7;
+      nonCastlingKingMovePenalty         = gameStageWeight == 0 ?
+      -10000                             : gameStageWeight <= 7 ? 
+      (8 - gameStageWeight) * -1200      : gameStageWeight <= 10 ?
+      2000                               : 7500 + (pos.can_castle(KING_SIDE) || pos.can_castle(QUEEN_SIDE)) * 3000;
   }
 
   for (auto& m : *this)
@@ -137,6 +144,7 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
+                   -     ((type_of(pos.moved_piece(m)) == KING) && (type_of(m) != CASTLING)) * nonCastlingKingMovePenalty
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
