@@ -32,6 +32,12 @@ namespace {
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
+ constexpr Bitboard BadKnightSquaresWhite = (FileABB | FileHBB | Rank1BB | Rank8BB) & ~Rank4BB;
+ constexpr Bitboard BadKnightSquaresBlack = (BadKnightSquaresWhite | Rank4BB) & ~Rank5BB;
+// h/a 4/5 are common squares to atttack bishops on f/c 4/5 
+
+ constexpr Bitboard BadKnightSquares[] = {BadKnightSquaresWhite, BadKnightSquaresBlack};
+
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
   void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
@@ -106,6 +112,7 @@ void MovePicker::score() {
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
   [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
+  [[maybe_unused]] Bitboard badKnightSquares;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -118,6 +125,8 @@ void MovePicker::score() {
       threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      badKnightSquares = BadKnightSquares[us == BLACK];
   }
 
   for (auto& m : *this)
@@ -137,6 +146,7 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
+                   -     type_of(pos.moved_piece(m)) == KNIGHT && (to_sq(m) & badKnightSquares) ? 2500 : 0
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
