@@ -97,6 +97,16 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
                              && pos.see_ge(ttm, threshold));
 }
 
+int cb = 16384;
+int qtbr = 50000, qetbr = 50000;
+int rtbm = 25000, retbm = 25000;
+int mtbp = 15000, metbp = 15000;
+int qtbm = 10000, qtbp  = 20000;
+int rtbp = 10000;
+
+TUNE(SetRange(0, 40000), cb, rtbp, qtbm, qtbp, mtbp, metbp, rtbm, retbm);
+TUNE(SetRange(30000, 70000), qtbr, qetbr);
+
 /// MovePicker::score() assigns a numerical value to each move in a list, used
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the history tables.
@@ -132,20 +142,20 @@ void MovePicker::score() {
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    +     (threatenedPieces & from_sq(m) ?
-                           (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
-                          : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
-                          :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
+                           (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? qetbr
+                          : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? retbm
+                          :                                         !(to_sq(m) & threatenedByPawn)  ? metbp
                           :                                                                           0)
                           :                                                                           0)
                    -     (!(threatenedPieces & from_sq(m)) ?
                            (type_of(pos.moved_piece(m)) == QUEEN ?  
-                           (bool(to_sq(m) & threatenedByRook) * 50000 + bool(to_sq(m) & threatenedByMinor) * 10000 + bool(to_sq(m) & threatenedByPawn) * 20000)
+                           (bool(to_sq(m) & threatenedByRook) * qtbr + bool(to_sq(m) & threatenedByMinor) * qtbm + bool(to_sq(m) & threatenedByPawn) * qtbp)
                           : type_of(pos.moved_piece(m)) == ROOK  ?
-                           (bool(to_sq(m) & threatenedByMinor) * 25000 + bool(to_sq(m) & threatenedByPawn) * 10000)
-                          : type_of(pos.moved_piece(m)) != PAWN  && (to_sq(m) & threatenedByPawn)  ? 15000
+                           (bool(to_sq(m) & threatenedByMinor) * rtbm + bool(to_sq(m) & threatenedByPawn) * rtbp)
+                          : type_of(pos.moved_piece(m)) != PAWN  && (to_sq(m) & threatenedByPawn)  ? mtbp
                           :                                                                           0)
                           :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * cb;
       else // Type == EVASIONS
       {
           if (pos.capture_stage(m))
