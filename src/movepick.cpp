@@ -97,12 +97,12 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
                              && pos.see_ge(ttm, threshold));
 }
 
-int cb = 16384;
-int qtbr = 50000, qetbr = 50000;
-int rtbm = 25000, retbm = 25000;
-int mtbp = 15000, metbp = 15000;
-int qtbm = 10000, qtbp  = 20000;
-int rtbp = 10000;
+int cb = 17936;
+int qtbr = 51015, qetbr = 51248;
+int rtbm = 24798, retbm = 25678;
+int mtbp = 15132, metbp = 14003;
+int qtbm = 11399, qtbp  = 19632;
+int rtbp = 10157;
 
 TUNE(SetRange(0, 40000), cb, rtbp, qtbm, qtbp, mtbp, metbp, rtbm, retbm);
 TUNE(SetRange(30000, 70000), qtbr, qetbr);
