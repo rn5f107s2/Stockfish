@@ -97,15 +97,15 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
                              && pos.see_ge(ttm, threshold));
 }
 
-int cb = 16384;
-int qtbr = 50000, qetbr = 50000;
-int rtbm = 25000, retbm = 25000;
-int mtbp = 15000, metbp = 15000;
-int qtbm = 10000, qtbp  = 20000;
-int rtbp = 10000;
+int cb = 18366;
+int qtbr = 50444, qetbr = 51106;
+int rtbm = 24828, retbm = 25494;
+int mtbp = 14218, metbp = 14309;
+int qtbm = 11646, qtbp  = 20082;
+int rtbp = 9780;
 
-TUNE(SetRange(0, 40000), cb, rtbp, qtbm, qtbp, mtbp, metbp, rtbm, retbm);
-TUNE(SetRange(30000, 70000), qtbr, qetbr);
+//TUNE(SetRange(0, 40000), cb, rtbp, qtbm, qtbp, mtbp, metbp, rtbm, retbm);
+//TUNE(SetRange(30000, 70000), qtbr, qetbr);
 
 /// MovePicker::score() assigns a numerical value to each move in a list, used
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
