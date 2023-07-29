@@ -20,6 +20,7 @@
 
 #include "bitboard.h"
 #include "movepick.h"
+#include "psqt.h"
 
 namespace Stockfish {
 
@@ -160,6 +161,8 @@ void MovePicker::score() {
                        : pt != PAWN ?    bool(to & threatenedByPawn)  * 15000
                        :                                                0 )
                        :                                                0 ;
+
+          m.value += (PSQT::psq[pc][to] - PSQT::psq[pc][from]) * 10;
       }
       
       else // Type == EVASIONS
