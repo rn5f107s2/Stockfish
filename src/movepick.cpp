@@ -160,6 +160,9 @@ void MovePicker::score() {
                        : pt != PAWN ?    bool(to & threatenedByPawn)  * 15000
                        :                                                0 )
                        :                                                0 ;
+
+          m.value += (pos.side_to_move() == WHITE ?  mg_value(PSQT::psq[pc][to] - PSQT::psq[pc][from])
+                                                  : -mg_value(PSQT::psq[pc][to] - PSQT::psq[pc][from])) * 10;
       }
       
       else // Type == EVASIONS
