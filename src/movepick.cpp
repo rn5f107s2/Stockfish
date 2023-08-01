@@ -106,7 +106,7 @@ void MovePicker::score() {
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
   [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
-  if constexpr (Type == QUIETS)
+  if constexpr (Type != CAPTURES)
   {
       Color us = pos.side_to_move();
 
@@ -125,22 +125,15 @@ void MovePicker::score() {
           m.value =  (7 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
 
-      else if constexpr (Type == QUIETS)
+      else if (Type == QUIETS || (Type == EVASIONS && !pos.capture_stage(m)))
       {
           Piece     pc   = pos.moved_piece(m);
           PieceType pt   = type_of(pos.moved_piece(m));
           Square    from = from_sq(m);
           Square    to   = to_sq(m);
 
-          // histories
-          m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
-          m.value += 2 * (*continuationHistory[0])[pc][to];
-          m.value +=     (*continuationHistory[1])[pc][to];
-          m.value +=     (*continuationHistory[3])[pc][to];
-          m.value +=     (*continuationHistory[5])[pc][to];
-
           // bonus for checks
-          m.value += bool(pos.check_squares(pt) & to) * 16384;
+          m.value = bool(pos.check_squares(pt) & to) * 16384;
 
           // bonus for escaping from capture
           m.value += threatenedPieces & from ?
@@ -160,17 +153,36 @@ void MovePicker::score() {
                        : pt != PAWN ?    bool(to & threatenedByPawn)  * 15000
                        :                                                0 )
                        :                                                0 ;
+          
+          //since Evasions have less histories scale m.value down so the histories
+          //dont get completely overshadowed
+          if constexpr (Type == EVASIONS)
+          {
+            m.value *= 286;
+            m.value /= 1000;
+          }
+
+          // histories
+          if constexpr (Type == QUIETS)
+          {
+            m.value += 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
+            m.value += 2 * (*continuationHistory[0])[pc][to];
+            m.value +=     (*continuationHistory[1])[pc][to];
+            m.value +=     (*continuationHistory[3])[pc][to];
+            m.value +=     (*continuationHistory[5])[pc][to];
+          }
+          else // Type == EVASIONS
+          {
+            m.value +=  (*mainHistory)[pos.side_to_move()][from_to(m)];
+            m.value +=  (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
+          }
       }
       
-      else // Type == EVASIONS
+      else // Type == EVASIONS && pos.capture_stage(m)
       {
-          if (pos.capture_stage(m))
-              m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                       - Value(type_of(pos.moved_piece(m)))
-                       + (1 << 28);
-          else
-              m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
-                       + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
+            m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
+                     - Value(type_of(pos.moved_piece(m)))
+                     + (1 << 28);
       }
 }
 
