@@ -1418,7 +1418,7 @@ moves_loop: // When in check, search starts here
     Move ttMove, move, bestMove;
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
-    bool pvHit, givesCheck, capture;
+    bool pvHit, givesCheck, capture, partialTTcut;
     int moveCount;
 
     // Step 1. Initialize node
@@ -1459,6 +1459,12 @@ moves_loop: // When in check, search starts here
         && ttValue != VALUE_NONE // Only in case of TT access race or if !ttHit
         && (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
         return ttValue;
+
+    partialTTcut =   !PvNode
+                  && tte->depth() == DEPTH_QS_NO_CHECKS
+                  && depth == 0
+                  && ttValue < beta
+                  && (tte->bound() & BOUND_LOWER);
 
     // Step 4. Static evaluation of the position
     if (ss->inCheck)
@@ -1510,7 +1516,8 @@ moves_loop: // When in check, search starts here
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory,
                                       &thisThread->captureHistory,
                                       contHist,
-                                      prevSq);
+                                      prevSq,
+                                      partialTTcut);
 
     int quietCheckEvasions = 0;
 
@@ -1611,6 +1618,9 @@ moves_loop: // When in check, search starts here
             }
         }
     }
+
+    if (partialTTcut)
+        bestValue = std::max(bestValue, ttValue);
 
     // Step 9. Check for mate
     // All legal moves have been searched. A special case: if we're in check

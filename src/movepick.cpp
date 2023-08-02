@@ -75,12 +75,14 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHistory* mh,
                                                              const CapturePieceToHistory* cph,
                                                              const PieceToHistory** ch,
-                                                             Square rs)
+                                                             Square rs,
+                                                             bool partialTTcut)
            : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch), ttMove(ttm), recaptureSquare(rs), depth(d)
 {
   assert(d <= 0);
 
-  stage = (pos.checkers() ? EVASION_TT : QSEARCH_TT) +
+  stage = partialTTcut ? QCHECK_INIT :
+           (pos.checkers() ? EVASION_TT : QSEARCH_TT) +
           !(   ttm
             && pos.pseudo_legal(ttm));
 }
