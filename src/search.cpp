@@ -753,13 +753,8 @@ namespace {
                 : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval > (ss-4)->staticEval
                 : true;
 
-    if ((ss-1)->currentMove == MOVE_NULL && ss->staticEval >= beta + 15 * depth)
-    {
-        depth -= 1 + (ttValue != VALUE_NONE && ttValue >= beta && (tte->bound() & BOUND_LOWER));
-
-        if (depth <= 0)
-            return ss->staticEval;
-    }
+    if ((ss-1)->currentMove == MOVE_NULL && ss->staticEval >= beta && depth == 1)
+        return ss->staticEval;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
