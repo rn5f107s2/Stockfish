@@ -755,10 +755,10 @@ namespace {
 
     if ((ss-1)->currentMove == MOVE_NULL && ss->staticEval >= beta + 15 * depth)
     {
-        if (depth == 1)
+        depth -= 1 + (ttValue != VALUE_NONE && ttValue >= beta && (tte->bound() & BOUND_LOWER));
+
+        if (depth <= 0)
             return ss->staticEval;
-        else 
-            depth--;
     }
 
     // Step 7. Razoring (~1 Elo).
