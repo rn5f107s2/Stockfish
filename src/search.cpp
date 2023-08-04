@@ -778,14 +778,15 @@ namespace {
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
         && (ss-1)->currentMove != MOVE_NULL
-        && (ss-1)->statScore < 17329
-        &&  eval >= beta
-        &&  eval >= ss->staticEval
-        &&  ss->staticEval >= beta - 21 * depth + 258
         && !excludedMove
-        &&  pos.non_pawn_material(us)
+        &&  beta > VALUE_TB_LOSS_IN_MAX_PLY
         &&  ss->ply >= thisThread->nmpMinPly
-        &&  beta > VALUE_TB_LOSS_IN_MAX_PLY)
+        &&  pos.non_pawn_material(us)
+        && ((   (ss-1)->statScore < 17329
+             && eval >= beta
+             &&  eval >= ss->staticEval
+             &&  ss->staticEval >= beta - 21 * depth + 258)
+        ||  ttMove == MOVE_NULL))
     {
         assert(eval - beta >= 0);
 
@@ -801,13 +802,24 @@ namespace {
 
         pos.undo_null_move();
 
+        if (!(   (ss-1)->statScore < 17329
+                     && eval >= beta
+                     && eval >= ss->staticEval
+                     && ss->staticEval >= beta - 21 * depth + 258) && ttMove == MOVE_NULL)
+                     {
+                        dbg_hit_on(nullValue >= beta);
+                     }
+
         if (nullValue >= beta)
         {
             // Do not return unproven mate or TB scores
             nullValue = std::min(nullValue, VALUE_TB_WIN_IN_MAX_PLY-1);
 
             if (thisThread->nmpMinPly || depth < 14)
+            {
+                tte->save(posKey, value_to_tt(nullValue, ss->ply), ss->ttPv, BOUND_LOWER, depth - R, MOVE_NULL, ss->staticEval);
                 return nullValue;
+            }
 
             assert(!thisThread->nmpMinPly); // Recursive verification is not allowed
 
