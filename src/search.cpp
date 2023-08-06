@@ -836,7 +836,7 @@ namespace {
         && !ttMove)
         depth -= 2;
 
-    probCutBeta = beta + 168 - 61 * (improving || (ttCapture && ttValue >= beta));
+    probCutBeta = beta + 168 - 61 * (improving || (ttCapture && ttValue >= beta + 107));
 
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
