@@ -548,7 +548,7 @@ namespace {
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
-    int moveCount, captureCount, quietCount;
+    int moveCount, captureCount, quietCount, improvement;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -708,6 +708,7 @@ namespace {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving = false;
+        improvement = 0;
         goto moves_loop;
     }
     else if (excludedMove)
@@ -749,9 +750,11 @@ namespace {
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
     // false otherwise. The improving flag is used in various pruning heuristics.
-    improving =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval > (ss-2)->staticEval
-                : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval > (ss-4)->staticEval
-                : true;
+    improvement = (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
+                : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
+                : 173;
+
+    improving = improvement > 0;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -973,7 +976,7 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          moveCountPruning = moveCount >= futility_move_count(improvement > 50 || (PvNode && improving), depth);
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
