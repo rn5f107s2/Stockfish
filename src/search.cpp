@@ -978,14 +978,16 @@ moves_loop: // When in check, search starts here
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
 
+          Value futStatic = ss->inCheck ? (ss-1)->staticEval != VALUE_NONE ? -(ss-1)->staticEval : VALUE_NONE : ss->staticEval;
+
           if (   capture
               || givesCheck)
           {
               // Futility pruning for captures (~2 Elo)
               if (   !givesCheck
                   && lmrDepth < 7
-                  && !ss->inCheck
-                  && ss->staticEval + 197 + 248 * lmrDepth + PieceValue[pos.piece_on(to_sq(move))]
+                  && futStatic != VALUE_NONE // not sure if this is needed
+                  && futStatic + 197 + 248 * lmrDepth + PieceValue[pos.piece_on(to_sq(move))]
                    + captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
                   continue;
 
@@ -1010,8 +1012,8 @@ moves_loop: // When in check, search starts here
               lmrDepth = std::max(lmrDepth, -2);
 
               // Futility pruning: parent node (~13 Elo)
-              if (   !ss->inCheck
-                  && lmrDepth < 12
+              if (   lmrDepth < 12
+                  && futStatic != VALUE_NONE // same here
                   && ss->staticEval + 112 + 138 * lmrDepth <= alpha)
                   continue;
 
