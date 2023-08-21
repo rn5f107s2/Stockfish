@@ -542,7 +542,7 @@ namespace {
 
     TTEntry* tte;
     Key posKey;
-    Move ttMove, move, excludedMove, bestMove;
+    Move ttMove, move, excludedMove, bestMove, notTheBestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
@@ -592,7 +592,7 @@ namespace {
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
-    (ss+1)->excludedMove = bestMove = MOVE_NONE;
+    (ss+1)->excludedMove = bestMove = notTheBestMove = MOVE_NONE;
     (ss+2)->killers[0]   = (ss+2)->killers[1] = MOVE_NONE;
     (ss+2)->cutoffCnt    = 0;
     ss->doubleExtensions = (ss-1)->doubleExtensions;
@@ -973,7 +973,11 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          bool queenCapBest =   notTheBestMove != MOVE_NONE 
+                             && notTheBestMove != bestMove 
+                             && type_of(pos.piece_on(to_sq(notTheBestMove))) == QUEEN
+                             && type_of(pos.moved_piece(notTheBestMove)) != QUEEN;
+          moveCountPruning = moveCount >= futility_move_count(improving, depth) - 3 * queenCapBest;
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
@@ -1283,6 +1287,7 @@ moves_loop: // When in check, search starts here
       if (value > bestValue)
       {
           bestValue = value;
+          notTheBestMove = move;
 
           if (value > alpha)
           {
