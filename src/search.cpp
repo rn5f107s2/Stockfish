@@ -973,7 +973,8 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          bool prevQueenCapture = (type_of(pos.captured_piece()) == QUEEN) && pos.pieces(~us, QUEEN);
+          moveCountPruning = moveCount >= futility_move_count(improving, depth) - (2 * prevQueenCapture);
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
