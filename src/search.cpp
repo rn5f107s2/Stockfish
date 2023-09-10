@@ -744,7 +744,8 @@ namespace {
     {
         ss->staticEval = eval = evaluate(pos, lazy);
         // Save static evaluation into the transposition table
-        tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, lazy ? VALUE_NONE : eval);
+        if (!lazy)
+            tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     }
 
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
