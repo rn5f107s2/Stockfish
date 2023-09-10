@@ -557,7 +557,7 @@ namespace {
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
-    int moveCount, captureCount, quietCount;
+    int moveCount, captureCount, quietCount, lazy;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -567,6 +567,7 @@ namespace {
     moveCount          = captureCount = quietCount = ss->moveCount = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
+    lazy               = VALUE_NONE;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -582,7 +583,7 @@ namespace {
         if (   Threads.stop.load(std::memory_order_relaxed)
             || pos.is_draw(ss->ply)
             || ss->ply >= MAX_PLY)
-            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos)
+            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, lazy)
                                                         : value_draw(pos.this_thread());
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
@@ -730,7 +731,7 @@ namespace {
         // Never assume anything about values stored in TT
         ss->staticEval = eval = tte->eval();
         if (eval == VALUE_NONE)
-            ss->staticEval = eval = evaluate(pos);
+            ss->staticEval = eval = evaluate(pos, lazy);
         else if (PvNode)
             Eval::NNUE::hint_common_parent_position(pos);
 
@@ -741,7 +742,7 @@ namespace {
     }
     else
     {
-        ss->staticEval = eval = evaluate(pos);
+        ss->staticEval = eval = evaluate(pos, lazy);
         // Save static evaluation into the transposition table
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     }
@@ -790,6 +791,7 @@ namespace {
         &&  ss->staticEval >= beta - 21 * depth + 258
         && !excludedMove
         &&  pos.non_pawn_material(us)
+        &&  lazy > -PawnValue
         &&  ss->ply >= thisThread->nmpMinPly
         &&  beta > VALUE_TB_LOSS_IN_MAX_PLY)
     {
@@ -1425,7 +1427,7 @@ moves_loop: // When in check, search starts here
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
     bool pvHit, givesCheck, capture;
-    int moveCount;
+    int moveCount, lazy;
 
     // Step 1. Initialize node
     if (PvNode)
@@ -1442,7 +1444,7 @@ moves_loop: // When in check, search starts here
     // Step 2. Check for an immediate draw or maximum ply reached
     if (   pos.is_draw(ss->ply)
         || ss->ply >= MAX_PLY)
-        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos) : VALUE_DRAW;
+        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, lazy) : VALUE_DRAW;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -1475,7 +1477,7 @@ moves_loop: // When in check, search starts here
         {
             // Never assume anything about values stored in TT
             if ((ss->staticEval = bestValue = tte->eval()) == VALUE_NONE)
-                ss->staticEval = bestValue = evaluate(pos);
+                ss->staticEval = bestValue = evaluate(pos, lazy);
 
             // ttValue can be used as a better position evaluation (~13 Elo)
             if (    ttValue != VALUE_NONE
@@ -1484,7 +1486,7 @@ moves_loop: // When in check, search starts here
         }
         else
             // In case of null move search use previous static eval with a different sign
-            ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos)
+            ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos, lazy)
                                                                           : -(ss-1)->staticEval;
 
         // Stand pat. Return immediately if static value is at least beta
