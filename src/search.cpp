@@ -759,7 +759,7 @@ namespace {
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
     // false otherwise. The improving flag is used in various pruning heuristics.
-    improving =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval > (ss-2)->staticEval
+    improving =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval > (ss-2)->staticEval - (lazy != VALUE_NONE && lazy > 0)
                 : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval > (ss-4)->staticEval
                 : true;
 
@@ -791,7 +791,6 @@ namespace {
         &&  ss->staticEval >= beta - 21 * depth + 258
         && !excludedMove
         &&  pos.non_pawn_material(us)
-        &&  lazy > -PawnValue
         &&  ss->ply >= thisThread->nmpMinPly
         &&  beta > VALUE_TB_LOSS_IN_MAX_PLY)
     {
