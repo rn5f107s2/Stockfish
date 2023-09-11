@@ -319,7 +319,7 @@ top:
   case PROB_PRE_INIT:
        cur = endBadCaptures = moves;
        endMoves = !pos.checkers() ? generate<CAPTURES>(pos, cur)
-                                 : generate<CAP_EVASIONS>(pos, cur);
+                                  : generate<CAP_EVASIONS>(pos, cur);
 
        ++stage;
        goto top;
