@@ -865,7 +865,9 @@ moves_loop: // When in check, search starts here
     {
         assert(probCutBeta < VALUE_INFINITE);
 
-        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
+        Value probStatic = ss->inCheck ? Eval::simple_eval(pos, pos.side_to_move()) : ss->staticEval;
+
+        MovePicker mp(pos, ttMove, probCutBeta - probStatic, &captureHistory);
 
         while ((move = mp.next_move()) != MOVE_NONE)
             if (move != excludedMove && pos.legal(move))
