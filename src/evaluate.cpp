@@ -135,13 +135,23 @@ namespace Eval {
 }
 
 
+const Bitboard center = (FILE_C | FILE_D | FILE_E | FILE_F) & (RANK_3 | RANK_4 | RANK_5 | RANK_6);
+const Bitboard BonusSquares[2][3] = 
+{{center & ~RANK_3, center & ~RANK_3, Rank7BB},
+ {center & ~RANK_6, center & ~RANK_6, Rank2BB}};
+
 /// simple_eval() returns a static, purely materialistic evaluation of the position
 /// from the point of view of the given color. It can be divided by PawnValue to get
 /// an approximation of the material advantage on the board in terms of pawns.
 
 Value Eval::simple_eval(const Position& pos, Color c) {
-   return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
-           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+   Value v = PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
+            +            (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+
+   for (int pc = 2; pc < 5; pc++)
+      v += popcount(pos.pieces(c, PieceType(pc)) & BonusSquares[c][pc - 2]) * 10;
+
+   return v;
 }
 
 
