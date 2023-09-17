@@ -148,8 +148,10 @@ Value Eval::simple_eval(const Position& pos, Color c) {
    Value v = PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
             +            (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 
-   for (int pc = 2; pc < 5; pc++)
-      v += popcount(pos.pieces(c, PieceType(pc)) & BonusSquares[c][pc - 2]) * 10;
+   for (int pc = 2; pc < 5; pc++) {
+      v += popcount(pos.pieces( c, PieceType(pc)) & BonusSquares[ c][pc - 2]) * 10;
+      v -= popcount(pos.pieces(~c, PieceType(pc)) & BonusSquares[~c][pc - 2]) * 10;
+   }
 
    return v;
 }
