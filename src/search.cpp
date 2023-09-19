@@ -46,6 +46,10 @@
 #include "uci.h"
 
 namespace Stockfish {
+int rdd = 4, base = 13, min = 7, max = 15;
+//max does not have an effect at the moment, but it may be beneficial to lower it to where it would have an effect (base > max)
+TUNE(SetRange(1, 50), rdd, base, min, max);
+//rather high range in so something using a high base and a low divisor is possible
 
 namespace Search {
 
@@ -264,11 +268,6 @@ void MainThread::search() {
 
   std::cout << sync_endl;
 }
-
-int rdd = 4, base = 13, min = 7, max = 15;
-//max does not have an effect at the moment, but it may be beneficial to lower it to where it would have an effect (base > max)
-TUNE(SetRange(1, 50), rdd, base, min, max);
-//rather high range in so something using a high base and a low divisor is possible
 
 /// Thread::search() is the main iterative deepening loop. It calls search()
 /// repeatedly with increasing depth until the allocated thinking time has been
