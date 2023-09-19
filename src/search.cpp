@@ -265,6 +265,11 @@ void MainThread::search() {
   std::cout << sync_endl;
 }
 
+int rdd = 4;
+int min = 7;
+int max = 10;
+int init = 13;
+TUNE(SetRange(1, 20), rdd, min, max, init);
 
 /// Thread::search() is the main iterative deepening loop. It calls search()
 /// repeatedly with increasing depth until the allocated thinking time has been
@@ -358,7 +363,7 @@ void Thread::search() {
 
           // Reset aspiration window starting size
           Value prev = rootMoves[pvIdx].averageScore;
-          delta = Value(std::clamp(13 - (rootDepth / 4), 7, 10)) + int(prev) * prev / 15799;
+          delta = Value(std::clamp(init - (rootDepth / rdd), min, max)) + int(prev) * prev / 15799;
           alpha = std::max(prev - delta,-VALUE_INFINITE);
           beta  = std::min(prev + delta, VALUE_INFINITE);
 
