@@ -265,6 +265,10 @@ void MainThread::search() {
   std::cout << sync_endl;
 }
 
+int rdd = 4, base = 13, min = 7, max = 15;
+//max does not have an effect at the moment, but it may be beneficial to lower it to where it would have an effect (base > max)
+TUNE(SetRange(1, 50), rdd, base, min, max);
+//rather high range in so something using a high base and a low divisor is possible
 
 /// Thread::search() is the main iterative deepening loop. It calls search()
 /// repeatedly with increasing depth until the allocated thinking time has been
@@ -358,7 +362,7 @@ void Thread::search() {
 
           // Reset aspiration window starting size
           Value prev = rootMoves[pvIdx].averageScore;
-          delta = Value(10) + int(prev) * prev / 15799;
+          delta = Value(std::clamp(base - (rootDepth / rdd), min, max)) + int(prev) * prev / 15799;
           alpha = std::max(prev - delta,-VALUE_INFINITE);
           beta  = std::min(prev + delta, VALUE_INFINITE);
 
