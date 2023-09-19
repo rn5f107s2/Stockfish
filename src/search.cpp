@@ -46,9 +46,9 @@
 #include "uci.h"
 
 namespace Stockfish {
-int rdd = 4, base = 13, min = 7, thisIsNotNamedMax = 15;
+int rdd = 4, base = 13, thisIsNamedMin = 7, thisIsNotNamedMax = 15;
 //max does not have an effect at the moment, but it may be beneficial to lower it to where it would have an effect (base > max)
-TUNE(SetRange(1, 50), rdd, base, min, thisIsNotNamedMax);
+TUNE(SetRange(1, 50), rdd, base, thisIsNamedMin, thisIsNotNamedMax);
 //rather high range in so something using a high base and a low divisor is possible
 
 namespace Search {
@@ -361,7 +361,7 @@ void Thread::search() {
 
           // Reset aspiration window starting size
           Value prev = rootMoves[pvIdx].averageScore;
-          delta = Value(std::clamp(base - (rootDepth / rdd), min, thisIsNotNamedMax)) + int(prev) * prev / 15799;
+          delta = Value(std::clamp(base - (rootDepth / rdd), thisIsNamedMin, thisIsNotNamedMax)) + int(prev) * prev / 15799;
           alpha = std::max(prev - delta,-VALUE_INFINITE);
           beta  = std::min(prev + delta, VALUE_INFINITE);
 
