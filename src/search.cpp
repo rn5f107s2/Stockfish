@@ -1424,7 +1424,7 @@ moves_loop: // When in check, search starts here
     Move ttMove, move, bestMove;
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
-    bool pvHit, givesCheck, capture;
+    bool pvHit, givesCheck, capture, disoveredCheck;
     int moveCount;
 
     // Step 1. Initialize node
@@ -1532,11 +1532,13 @@ moves_loop: // When in check, search starts here
 
         givesCheck = pos.gives_check(move);
         capture = pos.capture_stage(move);
+        disoveredCheck = capture && (pos.blockers_for_king(~pos.side_to_move()) & from_sq(move)) && !aligned(from_sq(move), to_sq(move), pos.square<KING>(~pos.side_to_move()));
 
         moveCount++;
 
         // Step 6. Pruning.
-        if (bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
+        if (   bestValue > VALUE_TB_LOSS_IN_MAX_PLY
+            && !disoveredCheck)
         {
             // Futility pruning and moveCount pruning (~10 Elo)
             if (   !givesCheck
