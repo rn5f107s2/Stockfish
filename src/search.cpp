@@ -1423,7 +1423,7 @@ moves_loop: // When in check, search starts here
     Key posKey;
     Move ttMove, move, bestMove;
     Depth ttDepth;
-    Value bestValue, value, ttValue, futilityValue, futilityBase;
+    Value bestValue, value, ttValue, futilityValue, futilityBase, simpleEval;
     bool pvHit, givesCheck, capture;
     int moveCount;
 
@@ -1458,6 +1458,7 @@ moves_loop: // When in check, search starts here
     ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
     ttMove = ss->ttHit ? tte->move() : MOVE_NONE;
     pvHit = ss->ttHit && tte->is_pv();
+    simpleEval = ss->inCheck ? Eval::simple_eval(pos, pos.side_to_move()) : VALUE_NONE;
 
     // At non-PV nodes we check for an early TT cutoff
     if (  !PvNode
@@ -1577,7 +1578,7 @@ moves_loop: // When in check, search starts here
             // We prune after the second quiet check evasion move, where being 'in check' is
             // implicitly checked through the counter, and being a 'quiet move' apart from
             // being a tt move is assumed after an increment because captures are pushed ahead.
-            if (quietCheckEvasions > 1)
+            if (quietCheckEvasions > 1 - (!ttMove && simpleEval + 150 <= alpha))
                 break;
 
             // Continuation history based pruning (~3 Elo)
