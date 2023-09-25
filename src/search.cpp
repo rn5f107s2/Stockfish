@@ -1468,7 +1468,10 @@ moves_loop: // When in check, search starts here
 
     // Step 4. Static evaluation of the position
     if (ss->inCheck)
-        bestValue = futilityBase = -VALUE_INFINITE;
+    {
+        bestValue = -VALUE_INFINITE;
+        futilityBase = Eval::simple_eval(pos, pos.side_to_move()) + 150;
+    }
     else
     {
         if (ss->ttHit)
