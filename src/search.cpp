@@ -554,7 +554,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
+    bool givesCheck, improving, priorCapture, singularQuietLMR, staticSimilar;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
@@ -747,7 +747,8 @@ namespace {
     }
 
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
-    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
+    staticSimilar = PvNode || (ss->staticEval - 400 <= alpha && ss->staticEval + 400 >= beta);
+    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && staticSimilar)
     {
         int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1817, 1817);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
