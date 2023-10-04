@@ -813,6 +813,12 @@ namespace {
             // Do not return unproven mate or TB scores
             nullValue = std::min(nullValue, VALUE_TB_WIN_IN_MAX_PLY-1);
 
+            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture)
+            {   
+                int malus = std::clamp(-int((ss-1)->staticEval + beta) * 2, -900, 0);
+                thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << malus;
+            }
+
             if (thisThread->nmpMinPly || depth < 14)
                 return nullValue;
 
