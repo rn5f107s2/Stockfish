@@ -750,7 +750,7 @@ namespace {
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
     //something like this (inVerif = thisThread->nmpMinPly == ss->ply + 3 * depth / 4) doesnt work (due to extension, I assume)
     alreadyUpdated = excludedMove || ss->inVerif;
-    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && !excludedMove && !alreadyUpdated)
+    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && !alreadyUpdated)
     {
         int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1817, 1817);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
