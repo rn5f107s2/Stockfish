@@ -556,7 +556,7 @@ namespace {
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
-    bool capture, moveCountPruning, ttCapture;
+    bool capture, moveCountPruning, ttCapture, alreadyUpdated;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -748,7 +748,9 @@ namespace {
     }
 
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
-    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && !excludedMove)
+    //something like this (inVerif = thisThread->nmpMinPly == ss->ply + 3 * depth / 4) doesnt work (due to extension, I assume)
+    alreadyUpdated = excludedMove || ss->inVerif;
+    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && !excludedMove && !alreadyUpdated)
     {
         int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1817, 1817);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
@@ -822,7 +824,11 @@ namespace {
             // until ply exceeds nmpMinPly.
             thisThread->nmpMinPly = ss->ply + 3 * (depth-R) / 4;
 
+            ss->inVerif = true;
+
             Value v = search<NonPV>(pos, ss, beta-1, beta, depth-R, false);
+
+            ss->inVerif = false;
 
             thisThread->nmpMinPly = 0;
 
