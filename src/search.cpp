@@ -819,7 +819,7 @@ namespace {
 
             if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture)
             {   
-                int malus = std::clamp(-int((ss-1)->staticEval + beta) * 4, -1817, 0);
+                int malus = std::clamp(-int((ss-1)->staticEval + beta) * (4 + (depth-R > 0)), -1817, 0);
                 thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << malus;
             }
 
