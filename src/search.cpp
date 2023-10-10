@@ -817,9 +817,9 @@ namespace {
             // Do not return unproven mate or TB scores
             nullValue = std::min(nullValue, VALUE_TB_WIN_IN_MAX_PLY-1);
 
-            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture)
+            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture && (depth-R) > 0)
             {   
-                int malus = std::clamp(-int((ss-1)->staticEval + beta) * (4 + (depth-R > 0)), -1817, 0);
+                int malus = std::clamp(-int((ss-1)->staticEval + beta) * 4, -1817, 0);
                 thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << malus;
             }
 
