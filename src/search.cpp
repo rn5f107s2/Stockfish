@@ -1729,7 +1729,7 @@ moves_loop: // When in check, search starts here
         int bestMoveBonus = bestValue > beta + 168 ? quietMoveBonus  // larger bonus
                                             : stat_bonus(depth);     // smaller bonus
 
-        int nonBestMalus = -bestMove - std::clamp(int(ss->staticEval - beta), 0, 300) * 5;
+        int nonBestMalus = -bestMoveBonus - std::clamp(int(ss->staticEval - beta), 0, 300) * 5;
 
         // Increase stats for the best move in case it was a quiet move
         update_quiet_stats(pos, ss, bestMove, bestMoveBonus);
