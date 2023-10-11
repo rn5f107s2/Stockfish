@@ -817,10 +817,12 @@ namespace {
             // Do not return unproven mate or TB scores
             nullValue = std::min(nullValue, VALUE_TB_WIN_IN_MAX_PLY-1);
 
-            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture && (depth-R) > 0)
+            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture)
             {   
                 int malus = std::clamp(-int((ss-1)->staticEval + beta) * 4, -1817, 0);
+                Piece prevPc = type_of((ss-1)->currentMove) == PROMOTION ? make_piece(~pos.side_to_move(), PAWN) : pos.piece_on(to_sq((ss-1)->currentMove));
                 thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << malus;
+                update_continuation_histories(ss-1, prevPc, prevSq, malus);
             }
 
             if (thisThread->nmpMinPly || depth < 14)
