@@ -917,9 +917,11 @@ moves_loop: // When in check, search starts here
         && abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
         return probCutBeta;
 
-    const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
-                                          nullptr                   , (ss-4)->continuationHistory,
-                                          nullptr                   , (ss-6)->continuationHistory };
+    int pn = (ss-1)->currentMove == MOVE_NULL ?  2 : 0;
+
+    const PieceToHistory* contHist[] = { (ss-(1+pn))->continuationHistory, (ss-2)->continuationHistory,
+                                          nullptr                        , (ss-4)->continuationHistory,
+                                          nullptr                        , (ss-6)->continuationHistory };
 
     Move countermove = prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : MOVE_NONE;
 
