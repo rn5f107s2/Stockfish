@@ -1046,8 +1046,10 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
+  MoveType mt = type_of(m);
+
   // Only deal with normal moves, assume others pass a simple SEE
-  if (type_of(m) != NORMAL)
+  if (mt == CASTLING || mt == EN_PASSANT)
       return VALUE_ZERO >= threshold;
 
   Square from = from_sq(m), to = to_sq(m);
