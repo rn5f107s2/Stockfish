@@ -1058,7 +1058,9 @@ bool Position::see_ge(Move m, Value threshold) const {
   if (swap < 0)
       return false;
 
-  swap = PieceValue[piece_on(from)] - swap;
+  Piece moving = (mt == NORMAL ? piece_on(from) : make_piece(WHITE, promotion_type(m)));
+  
+  swap = PieceValue[moving] - swap;
   if (swap <= 0)
       return true;
 
