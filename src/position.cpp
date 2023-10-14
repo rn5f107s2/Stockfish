@@ -1053,14 +1053,14 @@ bool Position::see_ge(Move m, Value threshold) const {
       return VALUE_ZERO >= threshold;
 
   Square from = from_sq(m), to = to_sq(m);
+  Piece captured = (mt == NORMAL ? piece_on(to) : make_piece(WHITE, promotion_type(m)));
 
-  int swap = PieceValue[piece_on(to)] - threshold;
+  int swap = PieceValue[captured] - threshold;
   if (swap < 0)
       return false;
 
-  Piece moving = (mt == NORMAL ? piece_on(from) : make_piece(WHITE, promotion_type(m)));
   
-  swap = PieceValue[moving] - swap;
+  swap = PieceValue[piece_on(from)] - swap;
   if (swap <= 0)
       return true;
 
