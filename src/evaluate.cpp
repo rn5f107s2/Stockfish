@@ -148,7 +148,7 @@ Value Eval::simple_eval(const Position& pos, Color c) {
 /// evaluate() is the evaluator for the outer world. It returns a static evaluation
 /// of the position from the point of view of the side to move.
 
-Value Eval::evaluate(const Position& pos) {
+Value Eval::evaluate(const Position& pos, Value beta) {
 
   assert(!pos.checkers());
 
@@ -162,7 +162,7 @@ Value Eval::evaluate(const Position& pos) {
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
 
-  if (lazy)
+  if (lazy && simpleEval < beta)
       v = Value(simpleEval);
   else
   {
