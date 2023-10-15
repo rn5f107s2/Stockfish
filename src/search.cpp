@@ -716,7 +716,8 @@ namespace {
     if (ss->inCheck)
     {
         // Skip early pruning when in check
-        ss->staticEval = eval = VALUE_NONE;
+        ss->staticEval = VALUE_NONE; 
+        eval = -(ss-1)->staticEval - 182;
         improving = false;
         goto moves_loop;
     }
@@ -916,6 +917,16 @@ moves_loop: // When in check, search starts here
         && abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
         && abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
         return probCutBeta;
+
+
+    if (  ss->inCheck
+        && (ss-1)->staticEval != VALUE_NONE
+        && (eval < alpha - 492 - (257 - 200 * ((ss+1)->cutoffCnt > 3)) * depth * depth))
+    {
+        value = qsearch<NonPV>(pos, ss, alpha, alpha + 1);
+        if(value < alpha)
+            return value;
+    }
 
     const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
                                          (ss-3)->continuationHistory, (ss-4)->continuationHistory,
