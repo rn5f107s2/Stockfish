@@ -804,7 +804,7 @@ namespace {
         Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4;
 
         ss->currentMove = MOVE_NULL;
-        ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
+        ss->continuationHistory = &thisThread->continuationHistory[pos.key() & 1][pos.side_to_move()][NO_PIECE][ss->ply & 63];
 
         pos.do_null_move(st);
 
@@ -1773,7 +1773,7 @@ moves_loop: // When in check, search starts here
         // Only update the first 2 continuation histories if we are in check
         if (ss->inCheck && i > 2)
             break;
-        if (is_ok((ss-i)->currentMove))
+        if ((ss-i)->currentMove != MOVE_NONE)
             (*(ss-i)->continuationHistory)[pc][to] << bonus / (1 + 3 * (i == 3));
     }
   }
