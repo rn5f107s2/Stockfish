@@ -133,7 +133,7 @@ public:
                                            Square);
   MovePicker(const Position&, Move, Value, const CapturePieceToHistory*);
   Move next_move(bool skipQuiets = false);
-  ExtMove *cur;
+  ExtMove *cur, *endMoves;
 
 private:
   template<PickType T, typename Pred> Move select(Pred);
@@ -146,7 +146,7 @@ private:
   const CapturePieceToHistory* captureHistory;
   const PieceToHistory** continuationHistory;
   Move ttMove;
-  ExtMove refutations[3], *endMoves, *endBadCaptures;
+  ExtMove refutations[3], *endBadCaptures;
   int stage;
   Square recaptureSquare;
   Value threshold;
