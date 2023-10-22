@@ -337,7 +337,8 @@ inline void Position::put_piece(Piece pc, Square s) {
   board[s] = pc;
   byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= s;
   byColorBB[color_of(pc)] |= s;
-  psq[color_of(pc)] += PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
+  if (type_of(pc) != KING)
+    psq[color_of(pc)] += PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
   pieceCount[pc]++;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
 }
@@ -348,7 +349,8 @@ inline void Position::remove_piece(Square s) {
   byTypeBB[ALL_PIECES] ^= s;
   byTypeBB[type_of(pc)] ^= s;
   byColorBB[color_of(pc)] ^= s;
-  psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
+  if (type_of(pc) != KING)
+    psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
   board[s] = NO_PIECE;
   pieceCount[pc]--;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
@@ -363,8 +365,11 @@ inline void Position::move_piece(Square from, Square to) {
   byColorBB[color_of(pc)] ^= fromTo;
   board[from] = NO_PIECE;
   board[to] = pc;
-  psq[color_of(pc)] += PSQT[relative_square(color_of(pc), to)][type_of(pc) == PAWN];
-  psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), from)][type_of(pc) == PAWN];
+  if (type_of(pc) != KING) 
+  {
+    psq[color_of(pc)] += PSQT[relative_square(color_of(pc), to)][type_of(pc) == PAWN];
+    psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), from)][type_of(pc) == PAWN];
+  }
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) { do_move(m, newSt, gives_check(m)); }
