@@ -151,8 +151,7 @@ void NNUE::verify() {
 
 Value Eval::simple_eval(const Position& pos, Color c) {
    return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
-           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
-           +           (pos.psqt(c)              - pos.psqt(~c));
+           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
 
@@ -172,8 +171,8 @@ Value Eval::evaluate(const Position& pos) {
                                      + abs(pos.this_thread()->bestValue)
                                      + abs(pos.this_thread()->rootSimpleEval);
 
-    if (lazy)
-        v = Value(simpleEval);
+    if (lazy) 
+        v = Value(simpleEval + pos.psqt(stm) - pos.psqt(~stm));
     else
     {
         int   nnueComplexity;
