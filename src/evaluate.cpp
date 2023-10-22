@@ -150,8 +150,9 @@ void NNUE::verify() {
 // an approximation of the material advantage on the board in terms of pawns.
 
 Value Eval::simple_eval(const Position& pos, Color c) {
-    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+   return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
+           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
+           +           (pos.psqt(c)              - pos.psqt(~c));
 }
 
 

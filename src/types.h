@@ -283,12 +283,24 @@ struct DirtyPiece {
     Square to[3];
 };
 
-    #define ENABLE_BASE_OPERATORS_ON(T) \
-        constexpr T operator+(T d1, int d2) { return T(int(d1) + d2); } \
-        constexpr T operator-(T d1, int d2) { return T(int(d1) - d2); } \
-        constexpr T operator-(T d) { return T(-int(d)); } \
-        inline T&   operator+=(T& d1, int d2) { return d1 = d1 + d2; } \
-        inline T&   operator-=(T& d1, int d2) { return d1 = d1 - d2; }
+const int PSQT[64][2] = 
+{
+  {-60,   0}, {-50,   0}, {-50,   0}, {-50,   0}, {-50,   0}, {-50,   0}, {-50,   0}, {-60,   0},
+  {-45, 100}, {-20, 100}, { 10, 100}, { 20, 100}, { 20, 100}, { 10, 100}, {-20, 100}, {-45, 100},
+  {-35,  50}, {  0,  50}, { 25,  50}, { 30,  50}, { 30,  50}, { 25,  50}, {  0,  50}, {-35,  50},
+  {-25,  20}, {  5,  20}, { 10,  20}, { 20,  20}, { 20,  20}, { 10,  20}, {  5,  20}, {-25,  20},
+  {-25,   0}, {  5,   0}, { 10,   5}, { 20,  15}, { 20,  15}, { 10,   5}, {  5,   0}, {-25,   0},
+  {-45,   0}, {  0,   0}, {  5,   0}, {  5,   0}, {  5,   0}, {  5, -10}, {  0,   0}, {-45,   0},
+  {-35,   0}, {  0,   0}, {  5,   0}, {  0, -10}, {  0, -10}, {  0,   0}, {  0,   0}, {-35,   0},
+  { -5,   0}, {-10,   0}, {-10,   0}, { 10,   0}, {  0,   0}, {-10,   0}, {-10,   0}, { -5,   0}
+};
+
+#define ENABLE_BASE_OPERATORS_ON(T)                                \
+constexpr T operator+(T d1, int d2) { return T(int(d1) + d2); }    \
+constexpr T operator-(T d1, int d2) { return T(int(d1) - d2); }    \
+constexpr T operator-(T d) { return T(-int(d)); }                  \
+inline T& operator+=(T& d1, int d2) { return d1 = d1 + d2; }       \
+inline T& operator-=(T& d1, int d2) { return d1 = d1 - d2; }
 
     #define ENABLE_INCR_OPERATORS_ON(T) \
         inline T& operator++(T& d) { return d = T(int(d) + 1); } \

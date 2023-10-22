@@ -147,17 +147,18 @@ class Position {
     Key key_after(Move m) const;
     Key material_key() const;
 
-    // Other properties of the position
-    Color   side_to_move() const;
-    int     game_ply() const;
-    bool    is_chess960() const;
-    Thread* this_thread() const;
-    bool    is_draw(int ply) const;
-    bool    has_game_cycle(int ply) const;
-    bool    has_repeated() const;
-    int     rule50_count() const;
-    Value   non_pawn_material(Color c) const;
-    Value   non_pawn_material() const;
+  // Other properties of the position
+  Color side_to_move() const;
+  int game_ply() const;
+  bool is_chess960() const;
+  Thread* this_thread() const;
+  bool is_draw(int ply) const;
+  bool has_game_cycle(int ply) const;
+  bool has_repeated() const;
+  int rule50_count() const;
+  int psqt(Color c) const;
+  Value non_pawn_material(Color c) const;
+  Value non_pawn_material() const;
 
     // Position consistency check, for debugging
     bool pos_is_ok() const;
@@ -182,19 +183,20 @@ class Position {
     template<bool AfterMove>
     Key adjust_key50(Key k) const;
 
-    // Data members
-    Piece      board[SQUARE_NB];
-    Bitboard   byTypeBB[PIECE_TYPE_NB];
-    Bitboard   byColorBB[COLOR_NB];
-    int        pieceCount[PIECE_NB];
-    int        castlingRightsMask[SQUARE_NB];
-    Square     castlingRookSquare[CASTLING_RIGHT_NB];
-    Bitboard   castlingPath[CASTLING_RIGHT_NB];
-    Thread*    thisThread;
-    StateInfo* st;
-    int        gamePly;
-    Color      sideToMove;
-    bool       chess960;
+  // Data members
+  Piece board[SQUARE_NB];
+  Bitboard byTypeBB[PIECE_TYPE_NB];
+  Bitboard byColorBB[COLOR_NB];
+  int pieceCount[PIECE_NB];
+  int castlingRightsMask[SQUARE_NB];
+  Square castlingRookSquare[CASTLING_RIGHT_NB];
+  Bitboard castlingPath[CASTLING_RIGHT_NB];
+  Thread* thisThread;
+  StateInfo* st;
+  int gamePly;
+  Color sideToMove;
+  bool chess960;
+  int psq[COLOR_NB];
 };
 
 std::ostream& operator<<(std::ostream& os, const Position& pos);
@@ -295,7 +297,13 @@ inline Key Position::adjust_key50(Key k) const {
 
 inline Key Position::material_key() const { return st->materialKey; }
 
-inline Value Position::non_pawn_material(Color c) const { return st->nonPawnMaterial[c]; }
+inline int Position::psqt(Color c) const {
+  return psq[c];
+}
+
+inline Value Position::non_pawn_material(Color c) const {
+  return st->nonPawnMaterial[c];
+}
 
 inline Value Position::non_pawn_material() const {
     return non_pawn_material(WHITE) + non_pawn_material(BLACK);
@@ -326,33 +334,37 @@ inline Thread* Position::this_thread() const { return thisThread; }
 
 inline void Position::put_piece(Piece pc, Square s) {
 
-    board[s] = pc;
-    byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= s;
-    byColorBB[color_of(pc)] |= s;
-    pieceCount[pc]++;
-    pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
+  board[s] = pc;
+  byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= s;
+  byColorBB[color_of(pc)] |= s;
+  psq[color_of(pc)] += PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
+  pieceCount[pc]++;
+  pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
 }
 
 inline void Position::remove_piece(Square s) {
 
-    Piece pc = board[s];
-    byTypeBB[ALL_PIECES] ^= s;
-    byTypeBB[type_of(pc)] ^= s;
-    byColorBB[color_of(pc)] ^= s;
-    board[s] = NO_PIECE;
-    pieceCount[pc]--;
-    pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
+  Piece pc = board[s];
+  byTypeBB[ALL_PIECES] ^= s;
+  byTypeBB[type_of(pc)] ^= s;
+  byColorBB[color_of(pc)] ^= s;
+  psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), s)][type_of(pc) == PAWN];
+  board[s] = NO_PIECE;
+  pieceCount[pc]--;
+  pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
 }
 
 inline void Position::move_piece(Square from, Square to) {
 
-    Piece    pc     = board[from];
-    Bitboard fromTo = from | to;
-    byTypeBB[ALL_PIECES] ^= fromTo;
-    byTypeBB[type_of(pc)] ^= fromTo;
-    byColorBB[color_of(pc)] ^= fromTo;
-    board[from] = NO_PIECE;
-    board[to]   = pc;
+  Piece pc = board[from];
+  Bitboard fromTo = from | to;
+  byTypeBB[ALL_PIECES] ^= fromTo;
+  byTypeBB[type_of(pc)] ^= fromTo;
+  byColorBB[color_of(pc)] ^= fromTo;
+  board[from] = NO_PIECE;
+  board[to] = pc;
+  psq[color_of(pc)] += PSQT[relative_square(color_of(pc), to)][type_of(pc) == PAWN];
+  psq[color_of(pc)] -= PSQT[relative_square(color_of(pc), from)][type_of(pc) == PAWN];
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) { do_move(m, newSt, gives_check(m)); }
