@@ -171,7 +171,7 @@ Value Eval::evaluate(const Position& pos) {
                                      + abs(pos.this_thread()->bestValue)
                                      + abs(pos.this_thread()->rootSimpleEval);
 
-    if (lazy)
+    if (lazy && !(pos.pieces(~stm, PAWN) & rank_bb(relative_rank(~stm, RANK_7))))
         v = Value(simpleEval);
     else
     {
