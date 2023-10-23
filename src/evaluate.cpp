@@ -172,7 +172,7 @@ Value Eval::evaluate(const Position& pos) {
                                      + abs(pos.this_thread()->rootSimpleEval);
 
     if (lazy)
-        v = Value(simpleEval);
+        v = Value(simpleEval * 2.47);
     else
     {
         int   nnueComplexity;
