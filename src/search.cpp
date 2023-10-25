@@ -914,9 +914,11 @@ moves_loop:  // When in check, search starts here
     // of this search was a fail low.
     bool likelyFailLow = PvNode && ttMove && (tte->bound() & BOUND_UPPER) && tte->depth() >= depth;
 
+    int dontSkipThreshold = ss->inCheck ? std::numeric_limits<int>::max() : std::clamp(16384 - (ss->staticEval - beta) * 73, 8196, 32768);
+
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
-    while ((move = mp.next_move(moveCountPruning)) != MOVE_NONE)
+    while ((move = mp.next_move(moveCountPruning, dontSkipThreshold)) != MOVE_NONE)
     {
         assert(is_ok(move));
 
