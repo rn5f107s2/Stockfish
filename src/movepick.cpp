@@ -90,11 +90,13 @@ MovePicker::MovePicker(const Position&              p,
                        const CapturePieceToHistory* cph,
                        const PieceToHistory**       ch,
                        Move                         cm,
-                       const Move*                  killers) :
+                       const Move*                  killers,
+                       const CounterMoveHistory*    cmh) :
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
     continuationHistory(ch),
+    counterMoves(cmh),
     ttMove(ttm),
     refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
     depth(d) {
@@ -174,6 +176,7 @@ void MovePicker::score() {
             PieceType pt   = type_of(pos.moved_piece(m));
             Square    from = from_sq(m);
             Square    to   = to_sq(m);
+            Move      cm   = (*counterMoves)[pc][to];
 
             // histories
             m.value = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
@@ -182,6 +185,9 @@ void MovePicker::score() {
             m.value += (*continuationHistory[2])[pc][to] / 4;
             m.value += (*continuationHistory[3])[pc][to];
             m.value += (*continuationHistory[5])[pc][to];
+
+            if (cm != MOVE_NONE)
+                m.value -= (*mainHistory)[~pos.side_to_move()][from_to(cm)] / 8;
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;

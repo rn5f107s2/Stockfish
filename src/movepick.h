@@ -136,7 +136,8 @@ class MovePicker {
                const CapturePieceToHistory*,
                const PieceToHistory**,
                Move,
-               const Move*);
+               const Move*,
+               const CounterMoveHistory*);
     MovePicker(const Position&,
                Move,
                Depth,
@@ -159,6 +160,7 @@ class MovePicker {
     const ButterflyHistory*      mainHistory;
     const CapturePieceToHistory* captureHistory;
     const PieceToHistory**       continuationHistory;
+    const CounterMoveHistory*    counterMoves;
     Move                         ttMove;
     ExtMove                      refutations[3], *cur, *endMoves, *endBadCaptures;
     int                          stage;
