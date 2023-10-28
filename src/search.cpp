@@ -812,10 +812,12 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
-            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture && (type_of(pos.piece_on(prevSq))) != PAWN && type_of((ss-1)->currentMove) != PROMOTION)
+            if ((ss-1)->currentMove != MOVE_NONE && !(ss-1)->inCheck && !priorCapture)
             {   
                 int malus = std::clamp(-int((ss-1)->staticEval + beta) * 2, -900, 0);
-                thisThread->pawnHistory[pawn_structure(pos)][pos.piece_on(prevSq)][prevSq] << malus;
+                thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << malus;
+                if ((type_of(pos.piece_on(prevSq))) != PAWN && type_of((ss-1)->currentMove) != PROMOTION)
+                    thisThread->pawnHistory[pawn_structure(pos)][pos.piece_on(prevSq)][prevSq] << malus;
             }
 
             if (thisThread->nmpMinPly || depth < 14)
