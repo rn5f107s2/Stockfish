@@ -1055,6 +1055,7 @@ bool Position::see_ge(Move m, Value threshold) const {
     Color    stm       = sideToMove;
     Bitboard attackers = attackers_to(to, occupied);
     Bitboard stmAttackers, bb;
+    Bitboard pinned[2] = {blockers_for_king(WHITE) & ~between_bb(square<KING>(WHITE), to), blockers_for_king(BLACK) & ~between_bb(square<KING>(BLACK), to)};
     int      res = 1;
 
     while (true)
@@ -1070,7 +1071,7 @@ bool Position::see_ge(Move m, Value threshold) const {
         // pinners on their original square.
         if (pinners(~stm) & occupied)
         {
-            stmAttackers &= ~blockers_for_king(stm);
+            stmAttackers &= ~pinned[stm];
 
             if (!stmAttackers)
                 break;
