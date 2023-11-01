@@ -869,6 +869,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
             {
                 assert(pos.capture_stage(move));
 
+                prefetch(TT.first_entry(pos.key_after(move)));
+
                 ss->currentMove = move;
                 ss->continuationHistory =
                   &thisThread
