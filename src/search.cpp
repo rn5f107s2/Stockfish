@@ -1093,7 +1093,7 @@ moves_loop:  // When in check, search starts here
             }
 
             // Check extensions (~1 Elo)
-            else if (givesCheck && depth > 9)
+            else if (givesCheck && (depth > 9 || move == ttMove))
                 extension = 1;
 
             // Quiet ttMove extensions (~1 Elo)
@@ -1697,6 +1697,7 @@ void update_all_stats(const Position& pos,
 
         int moveMalus = bestValue > beta + 168 ? quietMoveMalus      // larger malus
                                                : stat_malus(depth);  // smaller malus
+
 
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
