@@ -1698,6 +1698,9 @@ void update_all_stats(const Position& pos,
         int moveMalus = bestValue > beta + 168 ? quietMoveMalus      // larger malus
                                                : stat_malus(depth);  // smaller malus
 
+        if ((ss-1)->currentMove == MOVE_NULL)
+            moveMalus += moveMalus / 4;
+
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
         {
