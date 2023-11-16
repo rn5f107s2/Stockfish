@@ -554,7 +554,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, recapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -566,6 +566,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    recapture = false;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -958,6 +959,8 @@ moves_loop:  // When in check, search starts here
         capture    = pos.capture_stage(move);
         movedPiece = pos.moved_piece(move);
         givesCheck = pos.gives_check(move);
+        recapture  =    recapture 
+                     || (to_sq(move) == prevSq && capture && (type_of(pos.captured_piece()) == QUEEN || type_of(pos.captured_piece()) == ROOK));
 
         // Calculate new depth for this move
         newDepth = depth - 1;
@@ -1003,6 +1006,11 @@ moves_loop:  // When in check, search starts here
 
                 // Continuation history based pruning (~2 Elo)
                 if (lmrDepth < 6 && history < -3645 * depth)
+                    continue;
+
+                if (   recapture
+                    && (tte->bound() == BOUND_LOWER)
+                    && moveCount >= futility_move_count(false, depth - !PvNode))
                     continue;
 
                 history += 2 * thisThread->mainHistory[us][from_to(move)];
