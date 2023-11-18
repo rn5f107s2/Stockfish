@@ -309,7 +309,7 @@ top:
         [[fallthrough]];
 
     case QUIET :
-        if (!skipQuiets && select<Next>([&]() {
+        if (select<Next>([&]() {
                 return *cur != refutations[0].move && *cur != refutations[1].move
                     && *cur != refutations[2].move;
             }))
