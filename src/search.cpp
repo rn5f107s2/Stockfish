@@ -805,8 +805,11 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
-            if (thisThread->nmpMinPly || depth < 14)
+            if (thisThread->nmpMinPly || depth < 14) {
+                tte->save(posKey, nullValue, ss->ttPv, BOUND_LOWER, DEPTH_NONE, MOVE_NONE, ss->staticEval);
+                //value_to_tt shouldnt be necessary (nullValue >= beta > VALUE_TB_LOSS_IN_MAX_PLY, nullValue < VALUE_TB_WIN_IN_MAX_PLY)
                 return nullValue;
+            }
 
             assert(!thisThread->nmpMinPly);  // Recursive verification is not allowed
 
