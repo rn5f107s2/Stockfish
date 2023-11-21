@@ -1192,7 +1192,11 @@ moves_loop:  // When in check, search starts here
                   value > (bestValue + 51 + 10 * (newDepth - d));             // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;  // (~2 Elo)
 
-                newDepth += doDeeperSearch - doShallowerSearch;
+                const bool evenDeeper =   !ss->inCheck
+                                       && ss->doubleExtensions <= 6
+                                       && value > std::max(alpha, eval) + 200 * std::max(ss->doubleExtensions, 2);
+
+                newDepth += doDeeperSearch - doShallowerSearch + evenDeeper;
 
                 if (newDepth > d)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
