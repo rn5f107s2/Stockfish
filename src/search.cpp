@@ -1192,7 +1192,7 @@ moves_loop:  // When in check, search starts here
                   value > (bestValue + 51 + 10 * (newDepth - d));             // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;  // (~2 Elo)
 
-                const bool evenDeeper = !ss->inCheck && ss->doubleExtensions <= 6 && std::max(eval, alpha) + 600 < value;
+                const bool evenDeeper = !ss->inCheck && ss->doubleExtensions <= 6 && std::max(ss->staticEval, alpha) + 600 < value;
 
                 newDepth += doDeeperSearch - doShallowerSearch + evenDeeper;
 
