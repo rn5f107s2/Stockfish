@@ -1194,6 +1194,7 @@ moves_loop:  // When in check, search starts here
 
                 const int doedMargin = 700 - (300 * PvNode) - (150 * (!PvNode && improving));
                 const bool doEvenDeeperSearch =    !ss->inCheck
+                                                && ss->doubleExtensions <= 6
                                                 && value > std::max(eval, alpha) + doedMargin;
 
                 newDepth += doDeeperSearch - doShallowerSearch + doEvenDeeperSearch;
