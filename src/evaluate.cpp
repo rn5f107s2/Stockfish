@@ -56,6 +56,7 @@ namespace Stockfish {
 namespace Eval {
 
 std::string currentEvalFileName = "None";
+int shufflingDampening[100];
 
 // Tries to load a NNUE network at startup time, or when the engine
 // receives a UCI command "setoption name EvalFile value nn-[a-z0-9]{12}.nnue"
@@ -65,6 +66,9 @@ std::string currentEvalFileName = "None";
 // in the engine directory. Distro packagers may define the DEFAULT_NNUE_DIRECTORY
 // variable to have the engine search in a special directory in their distro.
 void NNUE::init() {
+
+    for (int shuffling = 0; shuffling != 100; shuffling++)
+        shufflingDampening[shuffling] = std::round(-40 * atan(0.06 * shuffling - 3) + 150);
 
     std::string eval_file = std::string(Options["EvalFile"]);
     if (eval_file.empty())
@@ -186,8 +190,8 @@ Value Eval::evaluate(const Position& pos) {
     }
 
     // Damp down the evaluation linearly when shuffling
-    int shufflingMultiplier = shuffling >= 50 ? 200 - shuffling : ((-82 * shuffling * shuffling) / 4096 + 200);
-    v = v * (shufflingMultiplier) / 214;
+    assert(shuffling < 100);
+    v = v * (shufflingDampening[shuffling]) / 214;
 
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
