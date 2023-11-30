@@ -186,7 +186,7 @@ Value Eval::evaluate(const Position& pos) {
     }
 
     // Damp down the evaluation linearly when shuffling
-    int shufflingMultiplier = shuffling >= 50 ? 200 - shuffling : (-(82 / 4096) * shuffling * shuffling + 200);
+    int shufflingMultiplier = shuffling >= 50 ? 200 - shuffling : ((-82 * shuffling * shuffling) / 4096 + 200);
     v = v * (shufflingMultiplier) / 214;
 
     // Guarantee evaluation does not hit the tablebase range
