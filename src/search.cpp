@@ -1192,10 +1192,10 @@ moves_loop:  // When in check, search starts here
                   value > (bestValue + 51 + 10 * (newDepth - d));             // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;  // (~2 Elo)
 
-                newDepth += doDeeperSearch - doShallowerSearch;
+                newDepth += doDeeperSearch;
 
-                if (newDepth > d)
-                    value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
+                if (newDepth - doShallowerSearch > d)
+                    value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - doShallowerSearch, !cutNode);
 
                 int bonus = value <= alpha ? -stat_malus(newDepth)
                           : value >= beta  ? stat_bonus(newDepth)
