@@ -1198,7 +1198,9 @@ moves_loop:  // When in check, search starts here
                 {
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
 
-                    if (doShallowerSearch && value > bestValue + 50 + 2 * newDepth) 
+                    const bool doDeeper2 = value > bestValue + 50 + 2 * newDepth;
+
+                    if (doShallowerSearch && newDepth > 5 && doDeeper2) 
                     {
                         newDepth += 2;
                         value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
