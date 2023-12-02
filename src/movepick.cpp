@@ -42,8 +42,10 @@ enum Stages {
 
     // generate evasion moves
     EVASION_TT,
-    EVASION_INIT,
-    EVASION,
+    EVASION_CAP_INIT,
+    EVASION_CAP,
+    EVASION_QUIET_INIT,
+    EVASION_QUIET,
 
     // generate probcut moves
     PROBCUT_TT,
@@ -323,15 +325,31 @@ top:
     case BAD_CAPTURE :
         return select<Next>([]() { return true; });
 
-    case EVASION_INIT :
+    case EVASION_CAP_INIT :
         cur      = moves;
-        endMoves = generate<EVASIONS>(pos, cur);
+        endMoves = generate<CAP_EVASIONS>(pos, cur);
 
         score<EVASIONS>();
         ++stage;
         [[fallthrough]];
 
-    case EVASION :
+    case EVASION_CAP :
+        if (select<Best>([]() { return true; }))
+            return *(cur - 1);
+
+        ++stage;
+        [[fallthrough]];
+
+    case EVASION_QUIET_INIT :
+        cur      = moves;
+        endMoves = generate<QUIET_EVASIONS>(pos, cur);
+
+        score<EVASIONS>();
+
+        ++stage;
+        [[fallthrough]];
+
+    case EVASION_QUIET :
         return select<Best>([]() { return true; });
 
     case PROBCUT :
