@@ -198,7 +198,7 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
                : Type == NON_EVASIONS   ? ~pos.pieces(Us)
                : Type == CAPTURES       ? pos.pieces(~Us)
                : Type == CAP_EVASIONS   ? pos.checkers()
-               : Type == QUIET_EVASIONS ? between_bb(ksq, lsb(pos.checkers())) & ~pos.checkers()
+               : Type == QUIET_EVASIONS ? between_bb(ksq, lsb(pos.checkers())) & ~pos.pieces(~Us)
                                         : ~pos.pieces();  // QUIETS || QUIET_CHECKS
         
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
@@ -210,7 +210,7 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
     if (!Checks || pos.blockers_for_king(~Us) & ksq)
     {
-        Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS || Type == QUIET_EVASIONS || Type == CAP_EVASIONS ? ~pos.pieces(Us) : target);
+        Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS || Type == QUIET_EVASIONS ? ~pos.pieces(Us) : Type == CAP_EVASIONS ? pos.pieces(~Us) : target);
         if (Checks)
             b &= ~attacks_bb<QUEEN>(pos.square<KING>(~Us));
 
