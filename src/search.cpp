@@ -969,11 +969,13 @@ moves_loop:  // When in check, search starts here
         // Depth conditions are important for mate finding.
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
         {
-            if (moveCountPruning
+            if (   moveCountPruning
                 && ss->inCheck
                 && !capture
-                && !givesCheck)
-                continue;
+                && !givesCheck
+                && (   (ss-2)->staticEval == VALUE_NONE
+                    || (ss-2)->staticEval < alpha - 50))
+                break;
 
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
