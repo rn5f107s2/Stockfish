@@ -973,6 +973,12 @@ moves_loop:  // When in check, search starts here
             if (!moveCountPruning)
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
+            if (   ss->inCheck
+                && moveCountPruning
+                && !capture
+                && !givesCheck)
+                continue;
+
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
 
