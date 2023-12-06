@@ -790,8 +790,10 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     {
         assert(eval - beta >= 0);
 
+        Value nmpEval = eval == ss->staticEval && (ss-2)->staticEval != VALUE_NONE ? eval + ((ss->staticEval - (ss-2)->staticEval) / 2) : eval;
+
         // Null move dynamic reduction based on depth and eval
-        Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4;
+        Depth R = std::min(int(nmpEval - beta) / 152, 6) + depth / 3 + 4;
 
         ss->currentMove         = MOVE_NULL;
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
