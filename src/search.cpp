@@ -973,7 +973,7 @@ moves_loop:  // When in check, search starts here
                 && moveCountPruning
                 && !capture
                 && !givesCheck
-                && (*contHist[0])[movedPiece][to_sq(move)] < 0)
+                && tte->bound() != BOUND_LOWER)
                 continue;
             
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
