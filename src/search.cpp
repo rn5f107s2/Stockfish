@@ -1122,6 +1122,18 @@ moves_loop:  // When in check, search starts here
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck);
 
+        if (mp.stage == 2) //GOOD_CAPTURE
+        {
+            value = qsearch<NonPV>(pos, ss+1, alpha, alpha + 1, -1);
+
+            if (value < alpha) 
+            {
+                mp.moveCurrentToBadCaps();
+                pos.undo_move(move);
+                continue;
+            }
+        }
+
         // Decrease reduction if position is or has been on the PV (~4 Elo)
         if (ss->ttPv && !likelyFailLow)
             r -= cutNode && tte->depth() >= depth ? 3 : 2;

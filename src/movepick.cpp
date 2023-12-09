@@ -138,6 +138,12 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
+void MovePicker::moveCurrentToBadCaps() {
+    assert(stage == GOOD_CAPTURE);
+
+    *endBadCaptures++ = *(cur-1);
+}
+
 // Assigns a numerical value to each move in a list, used
 // for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 // captures with a good history. Quiets moves are ordered using the history tables.
