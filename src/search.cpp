@@ -553,7 +553,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool     givesCheck, improving, priorCapture, singularQuietLMR, singularRecapture;
+    bool     givesCheck, improving, priorCapture, singularQuietLMR, ttCaptureThatScoresReallyWell;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
@@ -916,7 +916,7 @@ moves_loop:  // When in check, search starts here
                   &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
-    moveCountPruning = singularQuietLMR = singularRecapture = false;
+    moveCountPruning = singularQuietLMR = ttCaptureThatScoresReallyWell = false;
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal to or greater than the current depth, and the result
@@ -971,7 +971,7 @@ moves_loop:  // When in check, search starts here
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving && !singularRecapture, depth);
+                moveCountPruning = moveCount >= futility_move_count(improving && !ttCaptureThatScoresReallyWell, depth);
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
@@ -1055,7 +1055,7 @@ moves_loop:  // When in check, search starts here
                 {
                     extension        = 1;
                     singularQuietLMR = !ttCapture;
-                    singularRecapture = ttCapture && value < ttValue - 250;
+                    ttCaptureThatScoresReallyWell = ttCapture && value < ttValue - 150;
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 18 && ss->doubleExtensions <= 11)
