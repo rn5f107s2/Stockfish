@@ -1147,7 +1147,7 @@ moves_loop:  // When in check, search starts here
         if (singularQuietLMR)
             r--;
 
-        if (singularRecapture)
+        if (singularRecapture && !givesCheck)
             r++;
 
         // Increase reduction on repetition (~1 Elo)
