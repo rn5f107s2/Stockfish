@@ -553,7 +553,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool     givesCheck, improving, priorCapture, singularQuietLMR;
+    bool     givesCheck, improving, priorCapture, singularQuietLMR, singularRecapture;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
@@ -916,7 +916,7 @@ moves_loop:  // When in check, search starts here
                   &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
-    moveCountPruning = singularQuietLMR = false;
+    moveCountPruning = singularQuietLMR = singularRecapture = false;
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal to or greater than the current depth, and the result
@@ -1053,8 +1053,9 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    extension        = 1;
-                    singularQuietLMR = !ttCapture;
+                    extension         = 1;
+                    singularQuietLMR  = !ttCapture;
+                    singularRecapture = ttCapture && value < ttValue - 250;
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 18 && ss->doubleExtensions <= 11)
@@ -1145,6 +1146,9 @@ moves_loop:  // When in check, search starts here
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
         if (singularQuietLMR)
             r--;
+
+        if (singularRecapture)
+            r++;
 
         // Increase reduction on repetition (~1 Elo)
         if (move == (ss - 4)->currentMove && pos.has_repeated())
