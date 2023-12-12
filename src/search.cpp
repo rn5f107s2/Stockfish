@@ -426,7 +426,7 @@ void Thread::search() {
                 else
                     break;
 
-                delta += delta / 3;
+                delta += (delta - std::min(int(delta / 5), int(rootDepth - 6 / 2))) / 3;
 
                 assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
             }
