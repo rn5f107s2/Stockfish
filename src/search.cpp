@@ -556,7 +556,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
-    int      moveCount, captureCount, quietCount;
+    int      moveCount, captureCount, quietCount, threatCount;
+    Square   threatSquare;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -566,6 +567,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    threatCount  = 0;
+    threatSquare = SQ_NONE;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -1021,6 +1024,14 @@ moves_loop:  // When in check, search starts here
                 // Prune moves with negative SEE (~4 Elo)
                 if (!pos.see_ge(move, Value(-26 * lmrDepth * lmrDepth)))
                     continue;
+
+                if (   threatSquare
+                    && threatCount > 1
+                    && from_sq(move) != threatSquare
+                    && pos.piece_on(threatSquare) != NO_PIECE
+                    && type_of(pos.piece_on(threatSquare)) != PAWN
+                    && ss->staticEval + 50 + 75 * lmrDepth < beta)
+                    continue;
             }
         }
 
@@ -1181,7 +1192,20 @@ moves_loop:  // When in check, search starts here
             // std::clamp has been replaced by a more robust implementation.
             Depth d = std::max(1, std::min(newDepth - r, newDepth + 1));
 
+            (ss+1)->currentMove = MOVE_NONE;
+
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
+
+            if (is_ok((ss+1)->currentMove)) 
+            {
+                if (to_sq((ss+1)->currentMove) == threatSquare)
+                    threatCount++;
+                else
+                {
+                    threatSquare = to_sq((ss+1)->currentMove) != to_sq(move) ? to_sq((ss+1)->currentMove) : SQ_NONE;
+                    threatCount  = 0;
+                }
+            }
 
             // Do a full-depth search when reduced LMR search fails high
             if (value > alpha && d < newDepth)
