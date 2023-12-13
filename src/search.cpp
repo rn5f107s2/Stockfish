@@ -381,11 +381,14 @@ void Thread::search() {
             int failedHighCnt = 0;
             while (true)
             {
+                Value prev = bestValue;
                 // Adjust the effective depth searched, but ensure at least one effective increment
                 // for every four searchAgain steps (see issue #2717).
                 Depth adjustedDepth =
                   std::max(1, rootDepth - failedHighCnt - 3 * (searchAgainCounter + 1) / 4);
                 bestValue = Stockfish::search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
+
+                Value diff = prev != -VALUE_INFINITE ? Value(abs(bestValue - prev)) : VALUE_ZERO;
 
                 // Bring the best move to the front. It is critical that sorting
                 // is done with a stable algorithm because all the values but the
@@ -426,7 +429,7 @@ void Thread::search() {
                 else
                     break;
 
-                delta += delta / 3;
+                delta += delta / 3 + diff / 75;
 
                 assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
             }
