@@ -974,7 +974,19 @@ moves_loop:  // When in check, search starts here
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving, depth);
+            {
+                int fmc = futility_move_count(improving, depth);
+                moveCountPruning = moveCount >= fmc;
+
+                if (   moveCount > fmc - threatCount
+                    && !givesCheck
+                    && !capture
+                    && threatSquare != SQ_NONE
+                    && pos.piece_on(threatSquare) != NO_PIECE
+                    && type_of(pos.piece_on(threatSquare)) != PAWN
+                    && from_sq(move) != threatSquare)
+                    continue;
+            }
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
@@ -1023,14 +1035,6 @@ moves_loop:  // When in check, search starts here
 
                 // Prune moves with negative SEE (~4 Elo)
                 if (!pos.see_ge(move, Value(-26 * lmrDepth * lmrDepth)))
-                    continue;
-
-                if (   threatSquare
-                    && threatCount > 1
-                    && from_sq(move) != threatSquare
-                    && pos.piece_on(threatSquare) != NO_PIECE
-                    && type_of(pos.piece_on(threatSquare)) != PAWN
-                    && ss->staticEval + 50 + 75 * lmrDepth < beta)
                     continue;
             }
         }
