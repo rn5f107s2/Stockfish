@@ -978,7 +978,7 @@ moves_loop:  // When in check, search starts here
                 int fmc = futility_move_count(improving, depth);
                 moveCountPruning = moveCount >= fmc;
 
-                if (   moveCount > fmc - threatCount
+                if (   moveCount > fmc - threatCount * (1 + !improving)
                     && !givesCheck
                     && !capture
                     && threatSquare != SQ_NONE
