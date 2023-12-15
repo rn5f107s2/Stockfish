@@ -554,9 +554,9 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, threatSEEPassed;
     Piece    movedPiece;
-    int      moveCount, captureCount, quietCount, threatCount;
+    int      moveCount, captureCount, quietCount;
     Square   threatSquare;
 
     // Step 1. Initialize node
@@ -567,8 +567,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
-    threatCount  = 0;
     threatSquare = SQ_NONE;
+    threatSEEPassed = false;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -1025,13 +1025,13 @@ moves_loop:  // When in check, search starts here
                 if (!pos.see_ge(move, Value(-26 * lmrDepth * lmrDepth)))
                     continue;
 
-                if (   threatSquare
-                    && threatCount > 1
-                    && from_sq(move) != threatSquare
-                    && pos.piece_on(threatSquare) != NO_PIECE
-                    && type_of(pos.piece_on(threatSquare)) != PAWN
-                    && ss->staticEval + 50 + 75 * lmrDepth < beta)
+                if (   threatSquare != SQ_NONE
+                    && !threatSEEPassed
+                    && !pos.see_ge(make_move(threatSquare, threatSquare), Value(-26 * lmrDepth * lmrDepth)))
                     continue;
+                else
+                    threatSEEPassed = true;
+
             }
         }
 
@@ -1198,12 +1198,14 @@ moves_loop:  // When in check, search starts here
 
             if (is_ok((ss+1)->currentMove)) 
             {
-                if (to_sq((ss+1)->currentMove) == threatSquare)
-                    threatCount++;
-                else
+                if (   to_sq((ss+1)->currentMove) != to_sq(move)
+                    && pos.capture((ss+1)->currentMove) 
+                    && type_of(pos.piece_on(to_sq((ss+1)->currentMove)))
+                    && type_of((ss+1)->currentMove) != EN_PASSANT
+                    && threatSquare != to_sq((ss+1)->currentMove))
                 {
-                    threatSquare = to_sq((ss+1)->currentMove) != to_sq(move) ? to_sq((ss+1)->currentMove) : SQ_NONE;
-                    threatCount  = 0;
+                    threatSquare = to_sq((ss+1)->currentMove);
+                    threatSEEPassed = false;
                 }
             }
 

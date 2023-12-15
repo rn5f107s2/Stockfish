@@ -1039,7 +1039,9 @@ bool Position::see_ge(Move m, Value threshold) const {
 
     Square from = from_sq(m), to = to_sq(m);
 
-    int swap = PieceValue[piece_on(to)] - threshold;
+    const bool fET = from == to;
+
+    int swap = !fET ? PieceValue[piece_on(to)] : VALUE_ZERO - threshold;
     if (swap < 0)
         return false;
 
