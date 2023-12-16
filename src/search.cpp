@@ -772,6 +772,12 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
+
+        if (!ttMove)
+        {
+            ttMove = tte->move();
+            //dbg_hit_on(ttMove); Hit #0: Total 1496 Hits 1496 Hit Rate (%) 100
+        }
     }
 
     // Step 8. Futility pruning: child node (~40 Elo)
