@@ -914,6 +914,18 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : MOVE_NONE;
 
+
+    if (!rootNode && !ss->ttHit) 
+    {
+        bool ttHit = false;
+        tte       = TT.probe(posKey, ttHit);
+        ttValue   = ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+        ttMove    = rootNode  ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
+              : ttHit ? tte->move()
+                          : MOVE_NONE;
+        ttCapture = ttMove && pos.capture_stage(ttMove);
+    }
+
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &captureHistory, contHist,
                   &thisThread->pawnHistory, countermove, ss->killers);
 
