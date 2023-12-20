@@ -925,6 +925,8 @@ moves_loop:  // When in check, search starts here
     // of this search was a fail low.
     bool likelyFailLow = PvNode && ttMove && (tte->bound() & BOUND_UPPER) && tte->depth() >= depth;
 
+    bool goodTTCapture = ttCapture && pos.see_ge(ttMove, KnightValue - PawnValue);
+
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move(moveCountPruning)) != MOVE_NONE)
@@ -1023,6 +1025,13 @@ moves_loop:  // When in check, search starts here
                 // Prune moves with negative SEE (~4 Elo)
                 if (!pos.see_ge(move, Value(-26 * lmrDepth * lmrDepth)))
                     continue;
+
+                lmrDepth = std::max(lmrDepth, 1);
+
+                if (   goodTTCapture
+                    && moveCount > (3 + lmrDepth * depth) / 2)
+                    continue;
+
             }
         }
 
