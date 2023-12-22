@@ -362,7 +362,10 @@ std::string UCI::value(Value v) {
         ss << "cp " << (v > 0 ? 20000 - ply : -20000 + ply);
     }
     else
-        ss << "mate " << (v > 0 ? VALUE_MATE - v + 1 : -VALUE_MATE - v) / 2;
+    {
+        int ply = v > 0 ? v - VALUE_MATE_IN_MAX_PLY : v + VALUE_MATE_IN_MAX_PLY;
+        ss << "mate " << (ply + (ply > 0)) / 2;
+    }
 
     return ss.str();
 }
