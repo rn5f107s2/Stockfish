@@ -854,7 +854,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
       // So effective depth is equal to depth - 3
       && !(   tte->depth() >= depth - 3 
            && ttValue != VALUE_NONE 
-           && (ttValue < (tte->bound() != BOUND_LOWER ? probCutBeta : probCutBeta - 50))))
+           && ttValue < probCutBeta
+           && tte->bound() != BOUND_LOWER))
     {
         assert(probCutBeta < VALUE_INFINITE);
 
