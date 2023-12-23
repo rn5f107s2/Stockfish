@@ -153,6 +153,11 @@ Value Eval::simple_eval(const Position& pos, Color c) {
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
+int div1 = 214, div2 = 214;
+int bse1 = 200, bse2 = 200;
+
+TUNE(SetRange(1, 400), div1, div2, bse1, bse2);
+
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
@@ -187,7 +192,10 @@ Value Eval::evaluate(const Position& pos) {
     }
 
     // Damp down the evaluation linearly when shuffling
-    v = v * (200 - shuffling) / 214;
+    if (v > 0)
+        v = v * (bse1 - shuffling) / div1;
+    else
+        v = v * (bse2 - shuffling) / div2;
 
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
