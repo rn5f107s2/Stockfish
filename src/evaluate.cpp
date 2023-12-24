@@ -153,10 +153,8 @@ Value Eval::simple_eval(const Position& pos, Color c) {
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
-int div1 = 214, div2 = 214;
-int bse1 = 200, bse2 = 200;
-
-TUNE(SetRange(1, 400), div1, div2, bse1, bse2);
+int div1 = 233, div2 = 235;
+int bse1 = 196, bse2 = 193;
 
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
