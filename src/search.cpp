@@ -1040,12 +1040,13 @@ moves_loop:  // When in check, search starts here
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
-            if (!rootNode && move == ttMove && !excludedMove
+            if (!rootNode && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 27) + 2 * (PvNode && tte->is_pv())
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY 
                 && tte->depth() >= depth - 3
-                && (  (tte->bound() & BOUND_LOWER) 
+                && (  ((tte->bound() & BOUND_LOWER) && move == ttMove) 
                     || (   (tte->bound() & BOUND_UPPER)
+                        && moveCount == 1
                         && priorCapture
                         && type_of(pos.captured_piece()) != PAWN
                         && abs(Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.captured_piece())]) <= PawnValue
