@@ -1048,8 +1048,7 @@ moves_loop:  // When in check, search starts here
                     || (   (tte->bound() & BOUND_UPPER)
                         && priorCapture
                         && type_of(pos.captured_piece()) != PAWN
-                        && abs(Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.captured_piece())]) <= PawnValue
-                        && type_of(pos.piece_on(to_sq(move))) == type_of(pos.captured_piece()))))
+                        && abs(Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.piece_on(to_sq(move)))]) <= PawnValue)))
             {
                 Value singularBeta  = (tte->bound() & BOUND_LOWER) ? ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64
                                                                    : ttValue - KnightValue / 2;
@@ -1072,7 +1071,7 @@ moves_loop:  // When in check, search starts here
                         depth += depth < 15;
                     }
                 }
-                else if (tte->bound() & BOUND_UPPER)
+                else if (tte->bound() == BOUND_UPPER)
                 {}
 
                 // Multi-cut pruning
