@@ -1048,11 +1048,11 @@ moves_loop:  // When in check, search starts here
                     || (   (tte->bound() & BOUND_UPPER)
                         && priorCapture
                         && type_of(pos.captured_piece()) != PAWN
-                        && Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.captured_piece())] >= -PawnValue
-                        && PieceValue[type_of(pos.piece_on(to_sq(move)))] == PieceValue[type_of(pos.captured_piece())])))
+                        && abs(Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.captured_piece())]) <= PawnValue
+                        && type_of(pos.piece_on(to_sq(move))) == type_of(pos.captured_piece()))))
             {
                 Value singularBeta  = (tte->bound() & BOUND_LOWER) ? ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64
-                                                                   : ttValue - PieceValue[type_of(pos.piece_on(to_sq(move)))] + PawnValue;
+                                                                   : ttValue - KnightValue / 2;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
