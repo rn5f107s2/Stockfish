@@ -1072,7 +1072,7 @@ moves_loop:  // When in check, search starts here
                         depth += depth < 15;
                     }
                 }
-                else if (tte->bound() & BOUND_UPPER)
+                else if (tte->bound() == BOUND_UPPER)
                 {}
 
                 // Multi-cut pruning
