@@ -1042,10 +1042,17 @@ moves_loop:  // When in check, search starts here
             // Recursive singular search is avoided.
             if (!rootNode && move == ttMove && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 27) + 2 * (PvNode && tte->is_pv())
-                && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
-                && tte->depth() >= depth - 3)
+                && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY 
+                && tte->depth() >= depth - 3
+                && (  (tte->bound() & BOUND_LOWER) 
+                    || (   (tte->bound() & BOUND_UPPER)
+                        && priorCapture
+                        && type_of(pos.captured_piece()) != PAWN
+                        && Eval::simple_eval(pos, pos.side_to_move()) + PieceValue[type_of(pos.captured_piece())] >= -PawnValue
+                        && PieceValue[type_of(pos.piece_on(to_sq(move)))] == PieceValue[type_of(pos.captured_piece())])))
             {
-                Value singularBeta  = ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64;
+                Value singularBeta  = (tte->bound() & BOUND_LOWER) ? ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64
+                                                                   : ttValue - PieceValue[type_of(pos.piece_on(to_sq(move)))] + PawnValue;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1065,6 +1072,8 @@ moves_loop:  // When in check, search starts here
                         depth += depth < 15;
                     }
                 }
+                else if (tte->bound() & BOUND_UPPER)
+                {}
 
                 // Multi-cut pruning
                 // Our ttMove is assumed to fail high based on the bound of the TT entry,
