@@ -1107,6 +1107,13 @@ moves_loop:  // When in check, search starts here
                      && captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))]
                           > 4146)
                 extension = 1;
+
+            else if (   ss->inCheck 
+                     && moveCount == 1
+                     && capture
+                     && depth < 7
+                     && pos.see_ge(move, Value(1)))
+                extension = 1;
         }
 
         // Add extension to new depth
