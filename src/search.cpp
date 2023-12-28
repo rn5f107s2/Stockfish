@@ -1040,12 +1040,15 @@ moves_loop:  // When in check, search starts here
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
-            if (!rootNode && move == ttMove && !excludedMove
+            if (!rootNode 
+                && move == ttMove 
+                && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 27) + 2 * (PvNode && tte->is_pv())
-                && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
+                && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY 
+                && ((tte->bound() & BOUND_LOWER) || ((tte->bound() & BOUND_UPPER) && ttValue >= beta + 50))
                 && tte->depth() >= depth - 3)
             {
-                Value singularBeta  = ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64;
+                Value singularBeta  = ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64 + (tte->bound() == BOUND_UPPER) * 50;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1065,6 +1068,9 @@ moves_loop:  // When in check, search starts here
                         depth += depth < 15;
                     }
                 }
+
+                else if (tte->bound() == BOUND_UPPER)
+                {}
 
                 // Multi-cut pruning
                 // Our ttMove is assumed to fail high based on the bound of the TT entry,
