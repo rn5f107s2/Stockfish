@@ -182,7 +182,7 @@ void MovePicker::score() {
             int bigDragon;
             int smallDragonFire = (*smallDragon)[pos.side_to_move()][from_to(m)];
 
-            double vaccine = smallDragonFire > 0 ? double(8192 - smallDragonFire) / 8192 : 1;
+            double vaccine = smallDragonFire > 0 ? double(4096 - smallDragonFire) / 4096 : 1;
 
             // histories
             bigDragon = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
