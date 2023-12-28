@@ -187,13 +187,14 @@ void MovePicker::score() {
             // histories
             bigDragon = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
             bigDragon += 2 * (*pawnHistory)[pawn_structure(pos)][pc][to];
-            bigDragon += 2 * (*continuationHistory[0])[pc][to];
-            bigDragon += (*continuationHistory[1])[pc][to];
             bigDragon += (*continuationHistory[2])[pc][to] / 4;
             bigDragon += (*continuationHistory[3])[pc][to];
             bigDragon += (*continuationHistory[5])[pc][to];
 
             m.value = std::max(bigDragon, int(bigDragon * vaccine));
+
+            m.value += 2 * (*continuationHistory[0])[pc][to];
+            m.value +=     (*continuationHistory[1])[pc][to];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
