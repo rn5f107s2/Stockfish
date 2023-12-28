@@ -1721,7 +1721,7 @@ void update_all_stats(const Position& pos,
         thisThread->pawnHistory[pawn_structure(pos)][moved_piece][to_sq(bestMove)]
           << quietMoveBonus;
 
-        thisThread->smallDragon[us][from_to(bestMove)] << quietCount * 10;
+        thisThread->smallDragon[us][from_to(bestMove)] << 100;
 
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
@@ -1733,7 +1733,7 @@ void update_all_stats(const Position& pos,
             update_continuation_histories(ss, pos.moved_piece(quietsSearched[i]),
                                           to_sq(quietsSearched[i]), -quietMoveMalus);
 
-            thisThread->smallDragon[us][from_to(quietsSearched[i])] << -((quietCount - i) / 2);
+            thisThread->smallDragon[us][from_to(quietsSearched[i])] << -3;
         }
     }
     else
