@@ -90,6 +90,7 @@ MovePicker::MovePicker(const Position&              p,
                        const CapturePieceToHistory* cph,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
+                       const SmallDragon*           sd,
                        Move                         cm,
                        const Move*                  killers) :
     pos(p),
@@ -97,6 +98,7 @@ MovePicker::MovePicker(const Position&              p,
     captureHistory(cph),
     continuationHistory(ch),
     pawnHistory(ph),
+    smallDragon(sd),
     ttMove(ttm),
     refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
     depth(d) {
@@ -177,14 +179,21 @@ void MovePicker::score() {
             Square    from = from_sq(m);
             Square    to   = to_sq(m);
 
+            int bigDragon;
+            int smallDragonFire = (*smallDragon)[pos.side_to_move()][from_to(m)];
+
+            double vaccine = smallDragonFire > 0 ? double(8192 - smallDragonFire) / 8192 : 1;
+
             // histories
-            m.value = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
-            m.value += 2 * (*pawnHistory)[pawn_structure(pos)][pc][to];
-            m.value += 2 * (*continuationHistory[0])[pc][to];
-            m.value += (*continuationHistory[1])[pc][to];
-            m.value += (*continuationHistory[2])[pc][to] / 4;
-            m.value += (*continuationHistory[3])[pc][to];
-            m.value += (*continuationHistory[5])[pc][to];
+            bigDragon = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
+            bigDragon += 2 * (*pawnHistory)[pawn_structure(pos)][pc][to];
+            bigDragon += 2 * (*continuationHistory[0])[pc][to];
+            bigDragon += (*continuationHistory[1])[pc][to];
+            bigDragon += (*continuationHistory[2])[pc][to] / 4;
+            bigDragon += (*continuationHistory[3])[pc][to];
+            bigDragon += (*continuationHistory[5])[pc][to];
+
+            m.value += std::max(bigDragon, int(bigDragon * vaccine));
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
