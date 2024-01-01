@@ -281,6 +281,8 @@ void MainThread::search() {
     std::cout << sync_endl;
 }
 
+bool pastOptimum;
+
 
 // Main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
@@ -299,6 +301,7 @@ void Thread::search() {
     double      timeReduction = 1, totBestMoveChanges = 0;
     Color       us      = rootPos.side_to_move();
     int         iterIdx = 0;
+    pastOptimum = false;
 
     std::memset(ss - 7, 0, 10 * sizeof(Stack));
     for (int i = 7; i > 0; --i)
@@ -1178,6 +1181,9 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
+        if (pastOptimum && thisThread->completedDepth >= 10)
+            r++;
+
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
         if ((ss + 1)->cutoffCnt > 3)
             r++;
@@ -1917,6 +1923,8 @@ void MainThread::check_time() {
         || (Limits.movetime && elapsed >= Limits.movetime)
         || (Limits.nodes && Threads.nodes_searched() >= uint64_t(Limits.nodes)))
         Threads.stop = true;
+
+    pastOptimum = Limits.use_time_management() && elapsed > Time.optimum();
 }
 
 
