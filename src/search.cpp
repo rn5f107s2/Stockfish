@@ -281,6 +281,7 @@ void MainThread::search() {
     std::cout << sync_endl;
 }
 
+uint64_t timeLeft = 0;
 
 // Main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
@@ -299,6 +300,8 @@ void Thread::search() {
     double      timeReduction = 1, totBestMoveChanges = 0;
     Color       us      = rootPos.side_to_move();
     int         iterIdx = 0;
+
+    npms = 0;
 
     std::memset(ss - 7, 0, 10 * sizeof(Stack));
     for (int i = 7; i > 0; --i)
@@ -391,6 +394,8 @@ void Thread::search() {
                 Depth adjustedDepth =
                   std::max(1, rootDepth - failedHighCnt - 3 * (searchAgainCounter + 1) / 4);
                 bestValue = Stockfish::search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
+
+                npms = nodes / (Time.elapsed() + 1);
 
                 // Bring the best move to the front. It is critical that sorting
                 // is done with a stable algorithm because all the values but the
@@ -1178,6 +1183,12 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
+        uint64_t nodesLeft = timeLeft * thisThread->npms;
+
+        //                                                 200.000                    10.000
+        if (thisThread->completedDepth > 8 && nodesLeft < 200000 && thisThread->npms > 10000)
+            r++;
+
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
         if ((ss + 1)->cutoffCnt > 3)
             r++;
@@ -1917,6 +1928,8 @@ void MainThread::check_time() {
         || (Limits.movetime && elapsed >= Limits.movetime)
         || (Limits.nodes && Threads.nodes_searched() >= uint64_t(Limits.nodes)))
         Threads.stop = true;
+
+    timeLeft = Limits.use_time_management() ? elapsed - Time.maximum() : std::numeric_limits<int>::max();
 }
 
 
