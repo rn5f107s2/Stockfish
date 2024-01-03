@@ -557,7 +557,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
-    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta, mlpEval;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
@@ -945,6 +945,7 @@ moves_loop:  // When in check, search starts here
 
     value            = bestValue;
     moveCountPruning = singularQuietLMR = false;
+    mlpEval = ss->staticEval;
 
     // Indicate PvNodes that will probably fail low if the node was searched
     // at a depth equal to or greater than the current depth, and the result
@@ -1039,7 +1040,7 @@ moves_loop:  // When in check, search starts here
 
                 // Futility pruning: parent node (~13 Elo)
                 if (!ss->inCheck && lmrDepth < 14
-                    && ss->staticEval + (bestValue < ss->staticEval - 57 ? 124 : 71)
+                    && mlpEval + (bestValue < mlpEval - 57 ? 124 : 71)
                            + 118 * lmrDepth
                          <= alpha)
                     continue;
@@ -1079,10 +1080,17 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = MOVE_NONE;
 
+                if (value >= singularBeta && value > ss->staticEval)
+                    mlpEval  = std::min(value, ss->staticEval + 100);
+                
+
                 if (value < singularBeta)
                 {
                     extension        = 1;
                     singularQuietLMR = !ttCapture;
+
+                    if (value < ss->staticEval)
+                        mlpEval = std::max(value, ss->staticEval - 100);
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 17 && ss->doubleExtensions <= 11)
@@ -1117,6 +1125,8 @@ moves_loop:  // When in check, search starts here
                 // If the ttMove is assumed to fail low over the value of the reduced search (~1 Elo)
                 else if (ttValue <= value)
                     extension = -1;
+
+                mlpEval = std::clamp(mlpEval, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
             }
 
             // Check extensions (~1 Elo)
