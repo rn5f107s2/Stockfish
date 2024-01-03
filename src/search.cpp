@@ -723,8 +723,18 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     if (ss->inCheck)
     {
         // Skip early pruning when in check
-        ss->staticEval = eval = VALUE_NONE;
-        improving             = false;
+        ss->staticEval = eval = ((   !priorCapture 
+                                  && (ss - 1)->staticEval != VALUE_NONE 
+                                  && type_of(pos.piece_on(prevSq)) != PAWN
+                                  && type_of((ss-1)->currentMove) != PROMOTION) ? -(ss - 1)->staticEval - 182 //Viren value (https://tests.stockfishchess.org/tests/view/648cba4191c58631ce31ea7b)
+                                                                                : VALUE_NONE);
+
+        if (ss->staticEval != VALUE_NONE)
+            ss->staticEval += thisThread->correctionHistory[us][pawn_structure_index<Correction>(pos)] / 16;
+
+        std::clamp(ss->staticEval, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+        
+        improving = false;
         goto moves_loop;
     }
     else if (excludedMove)
