@@ -998,6 +998,9 @@ moves_loop:  // When in check, search starts here
         // Depth conditions are important for mate finding.
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
         {
+            if (moveCount > 2)
+                mlpEval = (mlpEval * 7 + ss->staticEval) / 8;
+
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
@@ -1081,7 +1084,7 @@ moves_loop:  // When in check, search starts here
                 ss->excludedMove = MOVE_NONE;
 
                 if (value >= singularBeta && value > ss->staticEval)
-                    mlpEval  = std::min(value, ss->staticEval + 100);
+                    mlpEval  = std::min(value, ss->staticEval + 150);
                 
 
                 if (value < singularBeta)
@@ -1090,7 +1093,7 @@ moves_loop:  // When in check, search starts here
                     singularQuietLMR = !ttCapture;
 
                     if (value < ss->staticEval)
-                        mlpEval = std::max(value, ss->staticEval - 100);
+                        mlpEval = std::max(value, ss->staticEval - 150);
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 17 && ss->doubleExtensions <= 11)
