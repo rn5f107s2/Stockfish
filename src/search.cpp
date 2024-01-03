@@ -1080,8 +1080,8 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = MOVE_NONE;
 
-                if (value >= singularBeta && value > ss->staticEval)
-                    mlpEval  = std::min(value, ss->staticEval + 100);
+                if (value >= singularBeta && value >= ss->staticEval)
+                    mlpEval = value;
                 
 
                 if (value < singularBeta)
@@ -1090,7 +1090,7 @@ moves_loop:  // When in check, search starts here
                     singularQuietLMR = !ttCapture;
 
                     if (value < ss->staticEval)
-                        mlpEval = std::max(value, ss->staticEval - 100);
+                        mlpEval = value;
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 17 && ss->doubleExtensions <= 11)
