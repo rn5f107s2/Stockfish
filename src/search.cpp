@@ -1088,7 +1088,7 @@ moves_loop:  // When in check, search starts here
                     singularQuietLMR = !ttCapture;
 
                     if (value < ss->staticEval)
-                        mlpEval = std::max(value, ss->staticEval - 100);
+                        mlpEval = std::max(value, ss->staticEval - 200);
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 17 && ss->doubleExtensions <= 11)
