@@ -1634,7 +1634,9 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
 
         // Step 7. Make and search the move
         pos.do_move(move, st, givesCheck);
-        value = -qsearch<nodeType>(pos, ss + 1, -beta, -alpha, depth - 1);
+        //There currently is no difference between depth -1 and depths below that, so not decrementing the depth further
+        //should currently not have any effect
+        value = -qsearch<nodeType>(pos, ss + 1, -beta, -alpha, ss->inCheck - 1);
         pos.undo_move(move);
 
         assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
