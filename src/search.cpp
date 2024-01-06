@@ -1534,6 +1534,20 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
             return bestValue;
         }
 
+        //Immediatly after entering qsearch
+        if (!pos.captured_piece() && ((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck)
+        {
+            int bonus = std::clamp(-13 * int((ss - 1)->staticEval + ss->staticEval), -1652, 1546);
+            bonus     = bonus > 0 ? 2 * bonus : bonus / 2;
+
+            thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()] << bonus;
+
+            Square prevSq = (ss-1)->currentMove.to_sq();
+
+            if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
+                thisThread->pawnHistory[pawn_structure_index(pos)][pos.piece_on(prevSq)][prevSq] << bonus / 4;
+        }
+
         if (bestValue > alpha)
             alpha = bestValue;
 
