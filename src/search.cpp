@@ -806,6 +806,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
                - (ss - 1)->statScore / 337
              >= beta
         && eval >= beta && eval < 29008  // smaller than TB wins
+        && !ss->dontRFP
         && (!ttMove || ttCapture))
         return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
 
@@ -820,14 +821,30 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Null move dynamic reduction based on depth and eval
         Depth R = std::min(int(eval - beta) / 144, 6) + depth / 3 + 4;
 
-        ss->currentMove         = Move::null();
-        ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
+        ss->dontRFP = true;
 
-        pos.do_null_move(st);
+        int oldNmpMinPly = thisThread->nmpMinPly;
+        thisThread->nmpMinPly = ss->ply + 1;
 
-        Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
+        Value nullValue = search<NonPV>(pos, ss, alpha, beta, 1, !cutNode);
 
-        pos.undo_null_move();
+        thisThread->nmpMinPly = oldNmpMinPly;
+        
+        ss->dontRFP = false;
+
+        if ((depth - R > 1) && nullValue >= beta) 
+        {
+
+            ss->currentMove         = Move::null();
+            ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
+
+            pos.do_null_move(st);
+
+            nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
+
+            pos.undo_null_move();
+
+        }
 
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
