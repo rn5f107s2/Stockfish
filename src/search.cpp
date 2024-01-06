@@ -821,18 +821,23 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Null move dynamic reduction based on depth and eval
         Depth R = std::min(int(eval - beta) / 144, 6) + depth / 3 + 4;
 
-        ss->dontRFP = true;
+        Value nullValue = alpha;
 
-        int oldNmpMinPly = thisThread->nmpMinPly;
-        thisThread->nmpMinPly = ss->ply + 1;
+        if (depth - R > 1)
+        {
+            ss->dontRFP = true;
 
-        Value nullValue = search<NonPV>(pos, ss, alpha, beta, 1, !cutNode);
+            int oldNmpMinPly = thisThread->nmpMinPly;
+            thisThread->nmpMinPly = ss->ply + 1;
 
-        thisThread->nmpMinPly = oldNmpMinPly;
+            nullValue = search<NonPV>(pos, ss, alpha, beta, 1, !cutNode);
+
+            thisThread->nmpMinPly = oldNmpMinPly;
         
-        ss->dontRFP = false;
+            ss->dontRFP = false;
+        }
 
-        if ((depth - R > 1) && nullValue >= beta) 
+        if (nullValue >= beta) 
         {
 
             ss->currentMove         = Move::null();
