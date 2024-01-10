@@ -585,7 +585,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Step 2. Check for aborted search and immediate draw
         if (Threads.stop.load(std::memory_order_relaxed) || pos.is_draw(ss->ply)
             || ss->ply >= MAX_PLY)
-            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos)
+            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE)
                                                         : value_draw(pos.this_thread());
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
@@ -739,7 +739,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         // Never assume anything about values stored in TT
         unadjustedStaticEval = ss->staticEval = eval = tte->eval();
         if (eval == VALUE_NONE)
-            unadjustedStaticEval = ss->staticEval = eval = evaluate(pos);
+            unadjustedStaticEval = ss->staticEval = eval = evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE);
         else if (PvNode)
             Eval::NNUE::hint_common_parent_position(pos);
 
@@ -757,7 +757,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     }
     else
     {
-        unadjustedStaticEval = ss->staticEval = eval = evaluate(pos);
+        unadjustedStaticEval = ss->staticEval = eval = evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE);
 
         Value newEval =
           ss->staticEval
@@ -1449,7 +1449,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
     Move     ttMove, move, bestMove;
     Depth    ttDepth;
     Value    bestValue, value, ttValue, futilityValue, futilityBase;
-    bool     pvHit, givesCheck, capture;
+    bool     pvHit, givesCheck, capture, priorCapture;
     int      moveCount;
     Color    us = pos.side_to_move();
 
@@ -1464,6 +1464,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
     bestMove           = Move::none();
     ss->inCheck        = pos.checkers();
     moveCount          = 0;
+    priorCapture       = pos.captured_piece();
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && thisThread->selDepth < ss->ply + 1)
@@ -1471,7 +1472,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
 
     // Step 2. Check for an immediate draw or maximum ply reached
     if (pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
-        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos) : VALUE_DRAW;
+        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE) : VALUE_DRAW;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -1502,7 +1503,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
         {
             // Never assume anything about values stored in TT
             if ((unadjustedStaticEval = ss->staticEval = bestValue = tte->eval()) == VALUE_NONE)
-                unadjustedStaticEval = ss->staticEval = bestValue = evaluate(pos);
+                unadjustedStaticEval = ss->staticEval = bestValue = evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE);
 
             Value newEval =
               ss->staticEval
@@ -1522,7 +1523,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
         {
             // In case of null move search, use previous static eval with a different sign
             unadjustedStaticEval = ss->staticEval = bestValue =
-              (ss - 1)->currentMove != Move::null() ? evaluate(pos) : -(ss - 1)->staticEval;
+              (ss - 1)->currentMove != Move::null() ? evaluate(pos, !priorCapture ? (ss-1)->staticEval : VALUE_NONE) : -(ss - 1)->staticEval;
 
             Value newEval =
               ss->staticEval

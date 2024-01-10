@@ -183,7 +183,7 @@ int Eval::simple_eval(const Position& pos, Color c) {
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
-Value Eval::evaluate(const Position& pos) {
+Value Eval::evaluate(const Position& pos, Value prevStatic) {
 
     assert(!pos.checkers());
 
@@ -197,7 +197,7 @@ Value Eval::evaluate(const Position& pos) {
         v = simpleEval;
     else
     {
-        bool smallNet = std::abs(simpleEval) > 1050;
+        bool smallNet = std::abs(simpleEval) > 1050 && (abs(prevStatic) == VALUE_NONE || abs(prevStatic) + 100 > abs(pos.this_thread()->bestValue));
 
         int nnueComplexity;
 
