@@ -1105,6 +1105,9 @@ moves_loop:  // When in check, search starts here
                 else if (singularBeta >= beta)
                     return singularBeta;
 
+                else if ((tte->bound() == BOUND_EXACT) && ttValue < beta) 
+                {}
+
                 // Negative extensions
                 // If other moves failed high over (ttValue - margin) without the ttMove on a reduced search,
                 // but we cannot do multi-cut because (ttValue - margin) is lower than the original beta,
