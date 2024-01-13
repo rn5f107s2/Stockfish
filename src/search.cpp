@@ -1859,7 +1859,7 @@ void update_quiet_stats(
     update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus);
 
     // Update countermove history
-    if (((ss - 1)->currentMove).is_ok())
+    if (!ss->inCheck && ((ss - 1)->currentMove).is_ok())
     {
         Square prevSq                                           = ((ss - 1)->currentMove).to_sq();
         workerThread.counterMoves[pos.piece_on(prevSq)][prevSq] = move;
