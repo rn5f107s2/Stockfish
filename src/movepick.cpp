@@ -220,7 +220,7 @@ void MovePicker::score() {
                         + (*continuationHistory[0])[pos.moved_piece(m)][m.to_sq()]
                         + (*pawnHistory)[pawn_structure_index(pos)][pos.moved_piece(m)][m.to_sq()];
 
-                if (m == refutations[2])
+                if (depth > 0 && m == refutations[2])
                     m.value += (1 << 20);
             }
         }
