@@ -189,7 +189,7 @@ class Worker {
     Value rootSimpleEval;
 
     // Public because they need to be updatable by the stats
-    CounterMoveHistory    counterMoves;
+    CounterMoveHistory    counterMoves[2];
     ButterflyHistory      mainHistory;
     CapturePieceToHistory captureHistory;
     ContinuationHistory   continuationHistory[2][2];

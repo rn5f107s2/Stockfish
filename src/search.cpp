@@ -500,17 +500,19 @@ void Search::Worker::iterative_deepening() {
 }
 
 void Search::Worker::clear() {
-    counterMoves.fill(Move::none());
     mainHistory.fill(0);
     captureHistory.fill(0);
     pawnHistory.fill(0);
     correctionHistory.fill(0);
 
     for (bool inCheck : {false, true})
+    {
+        counterMoves[inCheck].fill(Move::none());
         for (StatsType c : {NoCaptures, Captures})
             for (auto& to : continuationHistory[inCheck][c])
                 for (auto& h : to)
                     h->fill(-71);
+    }
 
 
     for (int i = 1; i < MAX_MOVES; ++i)
@@ -938,7 +940,7 @@ moves_loop:  // When in check, search starts here
                                         (ss - 6)->continuationHistory};
 
     Move countermove =
-      prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
+      prevSq != SQ_NONE ? thisThread->counterMoves[ss->inCheck][pos.piece_on(prevSq)][prevSq] : Move::none();
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
@@ -1862,7 +1864,7 @@ void update_quiet_stats(
     if (((ss - 1)->currentMove).is_ok())
     {
         Square prevSq                                           = ((ss - 1)->currentMove).to_sq();
-        workerThread.counterMoves[pos.piece_on(prevSq)][prevSq] = move;
+        workerThread.counterMoves[ss->inCheck][pos.piece_on(prevSq)][prevSq] = move;
     }
 }
 }
