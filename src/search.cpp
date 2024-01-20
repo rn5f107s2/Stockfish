@@ -1070,6 +1070,9 @@ moves_loop:  // When in check, search starts here
                 Value singularBeta  = ttValue - (66 + 58 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
 
+                if (ttValue > beta && !(ss->ttPv && !PvNode))
+                    singularBeta = std::max(singularBeta, beta);
+
                 ss->excludedMove = move;
                 value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
