@@ -562,7 +562,7 @@ Value Search::Worker::search(
 
     TTEntry* tte;
     Key      posKey;
-    Move     ttMove, move, excludedMove, bestMove;
+    Move     ttMove, move, excludedMove, bestMove, notTheBestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
@@ -611,7 +611,7 @@ Value Search::Worker::search(
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
-    (ss + 1)->excludedMove = bestMove = Move::none();
+    (ss + 1)->excludedMove = bestMove = notTheBestMove = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
     ss->doubleExtensions                        = (ss - 1)->doubleExtensions;
@@ -1178,7 +1178,7 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
-        if (singularTTMove && ttValue < alpha - 33)
+        if (singularTTMove && notTheBestMove == ttMove && ttValue < alpha)
             r++;
 
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
@@ -1318,6 +1318,7 @@ moves_loop:  // When in check, search starts here
         if (value > bestValue)
         {
             bestValue = value;
+            notTheBestMove = move;
 
             if (value > alpha)
             {
