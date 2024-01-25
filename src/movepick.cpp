@@ -205,6 +205,9 @@ void MovePicker::score() {
                           : pt != PAWN ? bool(to & threatenedByPawn) * 15000
                                        : 0)
                        : 0;
+
+            if (depth == 1 && pt == PAWN)
+              m.value += pos.rule50_count() * 333;
         }
 
         else  // Type == EVASIONS
