@@ -434,16 +434,21 @@ void Search::Worker::iterative_deepening() {
             timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
             double reduction = (1.4 + mainThread->previousTimeReduction) / (2.17 * timeReduction);
             double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / threads.size();
+            double goodStoppingPoint = threads.fineToStop() * 0.6 >= threads.size() ? 0.75 : 1;
 
             double totalTime =
               mainThread->tm.optimum() * fallingEval * reduction * bestMoveInstability;
 
+            double stopTime = totalTime * goodStoppingPoint;
+
             // Cap used time in case of a single legal move for a better viewer experience
-            if (rootMoves.size() == 1)
+            if (rootMoves.size() == 1) {
                 totalTime = std::min(500.0, totalTime);
+                stopTime  = std::min(500.0, stopTime);
+            }
 
             // Stop the search if we have exceeded the totalTime
-            if (mainThread->tm.elapsed(threads.nodes_searched()) > totalTime)
+            if (mainThread->tm.elapsed(threads.nodes_searched()) > stopTime)
             {
                 // If we are allowed to ponder do not stop the search now but
                 // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -931,6 +936,9 @@ moves_loop:  // When in check, search starts here
             continue;
 
         ss->moveCount = ++moveCount;
+
+        if (rootNode)
+            okToStop = moveCount > 3;
 
         if (rootNode && is_mainthread()
             && main_manager()->tm.elapsed(threads.nodes_searched()) > 3000)

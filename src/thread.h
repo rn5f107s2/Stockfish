@@ -90,6 +90,7 @@ class ThreadPool {
     Thread*  main_thread() const { return threads.front(); }
     uint64_t nodes_searched() const { return accumulate(&Search::Worker::nodes); }
     uint64_t tb_hits() const { return accumulate(&Search::Worker::tbHits); }
+    uint64_t fineToStop() const { return accumulate(&Search::Worker::okToStop); }
     Thread*  get_best_thread() const;
     void     start_searching();
     void     wait_for_search_finished() const;
