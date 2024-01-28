@@ -220,7 +220,7 @@ void Search::Worker::iterative_deepening() {
     Value             alpha, beta;
     Value             lastBestScore     = -VALUE_INFINITE;
     std::vector<Move> lastBestPV        = {Move::none()};
-    Depth             lastBestMoveDepth = 0;
+    Depth             lastBestMoveDepth = 0, lastOppBestMoveDepth = 0;
     SearchManager*    mainThread        = (thread_idx == 0 ? main_manager() : nullptr);
     double            timeReduction = 1, totBestMoveChanges = 0;
     Color             us = rootPos.side_to_move();
@@ -396,11 +396,16 @@ void Search::Worker::iterative_deepening() {
             rootMoves[0].pv    = lastBestPV;
             rootMoves[0].score = rootMoves[0].uciScore = lastBestScore;
         }
-        else if (rootMoves[0].pv[0] != lastBestPV[0])
+        else
         {
-            lastBestPV        = rootMoves[0].pv;
-            lastBestScore     = rootMoves[0].score;
-            lastBestMoveDepth = rootDepth;
+            if (rootMoves[0].pv[0] != lastBestPV[0]) {
+                lastBestPV        = rootMoves[0].pv;
+                lastBestScore     = rootMoves[0].score;
+                lastBestMoveDepth = rootDepth;
+            }
+
+            if (rootMoves[0].pv.size() > 1 && rootMoves[0].pv[1] != lastBestPV[1])
+                lastOppBestMoveDepth = rootDepth;
         }
 
         // Have we found a "mate in x"?
@@ -431,7 +436,7 @@ void Search::Worker::iterative_deepening() {
             fallingEval = std::clamp(fallingEval, 0.51, 1.51);
 
             // If the bestMove is stable over several iterations, reduce time accordingly
-            timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
+            timeReduction    = (lastBestMoveDepth + 8 + (lastOppBestMoveDepth + 3 > completedDepth)) < completedDepth ? 1.56 : 0.69;
             double reduction = (1.4 + mainThread->previousTimeReduction) / (2.17 * timeReduction);
             double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / threads.size();
 
