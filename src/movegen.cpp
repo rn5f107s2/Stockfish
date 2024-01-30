@@ -33,10 +33,10 @@ ExtMove* make_promotions(ExtMove* moveList, [[maybe_unused]] Square to) {
 
     constexpr bool all = Type == EVASIONS || Type == NON_EVASIONS;
 
-    if constexpr (Type == CAPTURES || all)
+    if constexpr (Type == CAPTURES || Type == CAP_EVASIONS || all || Type == QUIET_EVASIONS)
         *moveList++ = Move::make<PROMOTION>(to - D, to, QUEEN);
 
-    if constexpr ((Type == CAPTURES && Enemy) || (Type == QUIETS && !Enemy) || all)
+    if constexpr (((Type == CAPTURES || Type == CAP_EVASIONS) && Enemy) || ((Type == QUIETS || Type == QUIET_EVASIONS) && !Enemy) || all)
     {
         *moveList++ = Move::make<PROMOTION>(to - D, to, ROOK);
         *moveList++ = Move::make<PROMOTION>(to - D, to, BISHOP);
@@ -58,7 +58,7 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     constexpr Direction UpLeft   = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
 
     const Bitboard emptySquares = ~pos.pieces();
-    const Bitboard enemies      = Type == EVASIONS ? pos.checkers() : pos.pieces(Them);
+    const Bitboard enemies      = (Type == EVASIONS || Type == CAP_EVASIONS) ? pos.checkers() : pos.pieces(Them);
 
     Bitboard pawnsOn7    = pos.pieces(Us, PAWN) & TRank7BB;
     Bitboard pawnsNotOn7 = pos.pieces(Us, PAWN) & ~TRank7BB;
@@ -69,7 +69,7 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
         Bitboard b1 = shift<Up>(pawnsNotOn7) & emptySquares;
         Bitboard b2 = shift<Up>(b1 & TRank3BB) & emptySquares;
 
-        if constexpr (Type == EVASIONS)  // Consider only blocking squares
+        if constexpr (Type == EVASIONS || Type == CAP_EVASIONS || Type == QUIET_EVASIONS)  // Consider only blocking squares
         {
             b1 &= target;
             b2 &= target;
@@ -106,13 +106,13 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
         Bitboard b2 = shift<UpLeft>(pawnsOn7) & enemies;
         Bitboard b3 = shift<Up>(pawnsOn7) & emptySquares;
 
-        if constexpr (Type == EVASIONS)
+        if constexpr (Type == EVASIONS || Type == CAP_EVASIONS || Type == QUIET_EVASIONS)
             b3 &= target;
 
         while (b1)
             moveList = make_promotions<Type, UpRight, true>(moveList, pop_lsb(b1));
 
-        while (b2)
+        while (Type != QUIET_EVASIONS && b2)
             moveList = make_promotions<Type, UpLeft, true>(moveList, pop_lsb(b2));
 
         while (b3)
@@ -120,7 +120,7 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     }
 
     // Standard and en passant captures
-    if constexpr (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
+    if constexpr (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS || Type == CAP_EVASIONS)
     {
         Bitboard b1 = shift<UpRight>(pawnsNotOn7) & enemies;
         Bitboard b2 = shift<UpLeft>(pawnsNotOn7) & enemies;
@@ -191,13 +191,20 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
     const Square   ksq    = pos.square<KING>(Us);
     Bitboard       target;
 
+    if constexpr (Type == EVASIONS) {//used for perft / verifying ttMove legaiity for non normal ttMoves
+        moveList = generate_all<Us, CAP_EVASIONS>(pos, moveList);
+        return generate_all<Us, QUIET_EVASIONS>(pos, moveList);
+    }
+
     // Skip generating non-king moves when in double check
-    if (Type != EVASIONS || !more_than_one(pos.checkers()))
+    if ((Type != EVASIONS && Type != CAP_EVASIONS && Type != QUIET_EVASIONS) || !more_than_one(pos.checkers()))
     {
-        target = Type == EVASIONS     ? between_bb(ksq, lsb(pos.checkers()))
-               : Type == NON_EVASIONS ? ~pos.pieces(Us)
-               : Type == CAPTURES     ? pos.pieces(~Us)
-                                      : ~pos.pieces();  // QUIETS || QUIET_CHECKS
+        target = Type == EVASIONS       ? between_bb(ksq, lsb(pos.checkers()))
+               : Type == NON_EVASIONS   ? ~pos.pieces(Us)
+               : Type == CAPTURES       ? pos.pieces(~Us)
+               : Type == CAP_EVASIONS   ? pos.checkers()
+               : Type == QUIET_EVASIONS ? between_bb(ksq, lsb(pos.checkers())) & ~pos.pieces(~Us)
+                                        : ~pos.pieces();  // QUIETS || QUIET_CHECKS
 
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
         moveList = generate_moves<Us, KNIGHT, Checks>(pos, moveList, target);
@@ -208,7 +215,10 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
     if (!Checks || pos.blockers_for_king(~Us) & ksq)
     {
-        Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS ? ~pos.pieces(Us) : target);
+        Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS       ? ~pos.pieces( Us) 
+                                            : Type == CAP_EVASIONS   ?  pos.pieces(~Us) 
+                                            : Type == QUIET_EVASIONS ? ~pos.pieces()
+                                            : target);
         if (Checks)
             b &= ~attacks_bb<QUEEN>(pos.square<KING>(~Us));
 
@@ -252,6 +262,8 @@ template ExtMove* generate<CAPTURES>(const Position&, ExtMove*);
 template ExtMove* generate<QUIETS>(const Position&, ExtMove*);
 template ExtMove* generate<EVASIONS>(const Position&, ExtMove*);
 template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*);
+template ExtMove* generate<CAP_EVASIONS>(const Position&, ExtMove*);
+template ExtMove* generate<QUIET_EVASIONS>(const Position&, ExtMove*);
 template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*);
 
 

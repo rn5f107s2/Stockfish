@@ -33,6 +33,8 @@ enum GenType {
     QUIETS,
     QUIET_CHECKS,
     EVASIONS,
+    CAP_EVASIONS,
+    QUIET_EVASIONS,
     NON_EVASIONS,
     LEGAL
 };
