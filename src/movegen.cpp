@@ -109,7 +109,7 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
         if constexpr (Type == EVASIONS || Type == CAP_EVASIONS || Type == QUIET_EVASIONS)
             b3 &= target;
 
-        while (b1)
+        while (Type != QUIET_EVASIONS && b1)
             moveList = make_promotions<Type, UpRight, true>(moveList, pop_lsb(b1));
 
         while (Type != QUIET_EVASIONS && b2)
