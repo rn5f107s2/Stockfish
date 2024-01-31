@@ -45,6 +45,7 @@ enum Stages {
     EVASION_TT,
     EVASION_CAP_INIT,
     EVASION_CAP,
+    EVASION_COUNTER,
     EVASION_QUIET_INIT,
     EVASION_QUIET,
 
@@ -360,6 +361,18 @@ top:
         ++stage;
         [[fallthrough]];
 
+    case EVASION_COUNTER :
+      ++stage;
+
+      if (   depth > 0
+          && refutations[2] != Move::none()
+          && refutations[2] != ttMove
+          && !pos.capture_stage(refutations[2])
+          && pos.pseudo_legal(refutations[2]))
+            return refutations[2];
+
+      [[fallthrough]];
+
     case EVASION_QUIET_INIT :
         cur      = moves;
         endMoves = generate<QUIET_EVASIONS>(pos, cur);
@@ -370,7 +383,7 @@ top:
         [[fallthrough]];
 
     case EVASION_QUIET :
-        return select<Best>([]() { return true; });
+        return select<Best>([&]() { return depth <= 0 || *cur != refutations[2]; });
 
     case PROBCUT :
         return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
