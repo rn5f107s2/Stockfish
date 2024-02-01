@@ -1140,13 +1140,18 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
+        Depth notR = r;
+
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
+        if ((ss + 1)->cutoffCnt > 3) 
+        {
             r++;
+            notR++;
+        }
 
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
+        else if (move == ttMove) 
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
@@ -1155,7 +1160,8 @@ moves_loop:  // When in check, search starts here
                       + (*contHist[3])[movedPiece][move.to_sq()] - 4119;
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-        r -= ss->statScore / 15373;
+        r    -= ss->statScore / 15373;
+        notR -= ss->statScore / 15373;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         // We use various heuristics for the sons of a node after the first son has
@@ -1202,8 +1208,12 @@ moves_loop:  // When in check, search starts here
             if (!ttMove)
                 r += 2;
 
+            //If extensions are 2 and lmr was skipped the value used is always from singular search
+            bool tripExt =    extension == 2 
+                           && notR < ((600 - std::min(ttValue - value, 600)) / -100);
+
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3) + tripExt, !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
