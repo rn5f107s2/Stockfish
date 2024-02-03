@@ -50,7 +50,8 @@ enum PawnHistoryType {
 
 template<PawnHistoryType T = Normal>
 inline int pawn_structure_index(const Position& pos) {
-    return pos.pawn_key() & ((T == Normal ? PAWN_HISTORY_SIZE : CORRECTION_HISTORY_SIZE) - 1);
+    Key key = pos.pawn_key() ^ pos.non_pawn_material(WHITE) ^ pos.non_pawn_material(BLACK);
+    return key & ((T == Normal ? PAWN_HISTORY_SIZE : CORRECTION_HISTORY_SIZE) - 1);
 }
 
 // StatsEntry stores the stat table value. It is usually a number but could
