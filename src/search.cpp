@@ -1071,7 +1071,8 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
 
-                if (value >= singularBeta) 
+                if (   value >= singularBeta
+                    && value >= beta)
                 {
                     assert(ss->currentMove != Move::null());
                     mp.setPrioMove(ss->currentMove);
