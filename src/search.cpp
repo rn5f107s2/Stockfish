@@ -1050,6 +1050,7 @@ moves_loop:  // When in check, search starts here
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
+                ss->currentMove = Move::none();
                 value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
@@ -1089,6 +1090,12 @@ moves_loop:  // When in check, search starts here
                 // over current beta (~1 Elo)
                 else if (cutNode)
                     extension = -2;
+
+                if (value >= singularBeta) 
+                {
+                    assert(ss->currentMove != Move::null());
+                    mp.setPrioMove(ss->currentMove);
+                }
             }
 
             // Extension for capturing the previous moved piece (~1 Elo at LTC)
