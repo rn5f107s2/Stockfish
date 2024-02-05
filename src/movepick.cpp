@@ -33,6 +33,7 @@ namespace {
 enum Stages {
     // generate main search moves
     MAIN_TT,
+    PRIO_MOVE,
     CAPTURE_INIT,
     GOOD_CAPTURE,
     REFUTATION,
@@ -255,6 +256,14 @@ top:
         ++stage;
         return ttMove;
 
+    case PRIO_MOVE :
+        ++stage;
+
+        if (prioMove != Move::none())
+            return prioMove;
+
+    [[fallthrough]];
+
     case CAPTURE_INIT :
     case PROBCUT_INIT :
     case QCAPTURE_INIT :
@@ -381,6 +390,10 @@ top:
 
     assert(false);
     return Move::none();  // Silence warning
+}
+
+void MovePicker::setPrioMove(Move pm) {
+    prioMove = pm;
 }
 
 }  // namespace Stockfish

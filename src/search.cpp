@@ -1028,6 +1028,7 @@ moves_loop:  // When in check, search starts here
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
+                ss->currentMove = Move::none();
                 value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
@@ -1069,6 +1070,12 @@ moves_loop:  // When in check, search starts here
                 // If the ttMove is assumed to fail low over the value of the reduced search (~1 Elo)
                 else if (ttValue <= value)
                     extension = -1;
+
+                if (value >= singularBeta) 
+                {
+                    assert(ss->currentMove != Move::null());
+                    mp.setPrioMove(ss->currentMove);
+                }
             }
 
             // Check extensions (~1 Elo)
