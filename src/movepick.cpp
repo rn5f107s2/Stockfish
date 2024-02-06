@@ -278,7 +278,7 @@ top:
     case GOOD_CAPTURE :
         if (select<Next>([&]() {
                 // Move losing capture to endBadCaptures to be tried later
-                return pos.see_ge(*cur, -cur->value) ? true : (*endBadCaptures++ = *cur, false);
+                return pos.see_ge(*cur, -cur->value) ? (*cur != prioMove) : (*endBadCaptures++ = *cur, false);
             }))
             return *(cur - 1);
 
@@ -295,7 +295,7 @@ top:
 
     case REFUTATION :
         if (select<Next>([&]() {
-                return *cur != Move::none() && !pos.capture_stage(*cur) && pos.pseudo_legal(*cur);
+                return *cur != Move::none() && *cur != prioMove && !pos.capture_stage(*cur) && pos.pseudo_legal(*cur);
             }))
             return *(cur - 1);
         ++stage;
@@ -316,7 +316,7 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
+                return *cur != refutations[0] && *cur != prioMove && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
             if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
@@ -334,7 +334,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([]() { return true; }))
+        if (select<Next>([&]() { return *cur != prioMove; }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
@@ -347,7 +347,7 @@ top:
     case BAD_QUIET :
         if (!skipQuiets)
             return select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
+                return *cur != refutations[0] && *cur != prioMove && *cur != refutations[1] && *cur != refutations[2];
             });
 
         return Move::none();
