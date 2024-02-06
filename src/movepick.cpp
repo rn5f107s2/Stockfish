@@ -199,7 +199,7 @@ Move MovePicker::select(Pred filter) {
         if constexpr (T == Best)
             std::swap(*cur, *std::max_element(cur, endMoves));
 
-        if (*cur != ttMove && filter())
+        if (*cur != ttMove && *cur != prioMove && filter())
             return *cur++;
 
         cur++;
@@ -286,7 +286,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([]() { return true; }))
+        if (select<Next>([&]() { return true; }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
