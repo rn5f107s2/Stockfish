@@ -120,7 +120,8 @@ void update_all_stats(const Position& pos,
                       int             quietCount,
                       Move*           capturesSearched,
                       int             captureCount,
-                      Depth           depth);
+                      Depth           depth,
+                      const Move            threat);
 
 }  // namespace
 
@@ -519,7 +520,7 @@ Value Search::Worker::search(
 
     TTEntry* tte;
     Key      posKey;
-    Move     ttMove, move, excludedMove, bestMove;
+    Move     ttMove, move, excludedMove, bestMove, threat;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture;
@@ -535,6 +536,7 @@ Value Search::Worker::search(
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    threat                                                = Move::none();
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -682,6 +684,7 @@ Value Search::Worker::search(
 
 
     Value unadjustedStaticEval = VALUE_NONE;
+    ButterflyHistory *th = &thisThread->threatHistory[NO_PIECE][SQUARE_ZERO][NO_PIECE_TYPE];
 
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
@@ -779,8 +782,14 @@ Value Search::Worker::search(
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
 
         pos.do_null_move(st, tt);
+        (ss+1)->currentMove = Move::none();
 
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
+
+        threat = (ss+1)->currentMove;
+
+        if (threat != Move::none()) 
+            th = &thisThread->threatHistory[pos.moved_piece(threat)][threat.to_sq()][type_of(pos.piece_on(threat.to_sq()))];
 
         pos.undo_null_move();
 
@@ -897,7 +906,7 @@ moves_loop:  // When in check, search starts here
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, countermove, ss->killers);
+                  contHist, &thisThread->pawnHistory, th, countermove, ss->killers);
 
     value            = bestValue;
     moveCountPruning = false;
@@ -1312,7 +1321,7 @@ moves_loop:  // When in check, search starts here
     // If there is a move that produces search value greater than alpha we update the stats of searched moves
     else if (bestMove)
         update_all_stats(pos, ss, *this, bestMove, bestValue, beta, prevSq, quietsSearched,
-                         quietCount, capturesSearched, captureCount, depth);
+                         quietCount, capturesSearched, captureCount, depth, threat);
 
     // Bonus for prior countermove that caused the fail low
     else if (!priorCapture && prevSq != SQ_NONE)
@@ -1699,7 +1708,8 @@ void update_all_stats(const Position& pos,
                       int             quietCount,
                       Move*           capturesSearched,
                       int             captureCount,
-                      Depth           depth) {
+                      Depth           depth,
+                      const Move            threat) {
 
     Color                  us             = pos.side_to_move();
     CapturePieceToHistory& captureHistory = workerThread.captureHistory;
@@ -1720,12 +1730,25 @@ void update_all_stats(const Position& pos,
         int pIndex = pawn_structure_index(pos);
         workerThread.pawnHistory[pIndex][moved_piece][bestMove.to_sq()] << quietMoveBonus;
 
+
+        if (threat != Move::none()) 
+        {
+            ButterflyHistory *th = &workerThread.threatHistory[pos.moved_piece(threat)][threat.to_sq()][type_of(pos.piece_on(threat.to_sq()))];
+            (*th)[pos.side_to_move()][bestMove.from_to()] << quietMoveBonus;
+        }
+
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
         {
             workerThread
                 .pawnHistory[pIndex][pos.moved_piece(quietsSearched[i])][quietsSearched[i].to_sq()]
               << -quietMoveMalus;
+
+            if (threat != Move::none()) 
+            {
+                ButterflyHistory *th = &workerThread.threatHistory[pos.moved_piece(threat)][threat.to_sq()][type_of(pos.piece_on(threat.to_sq()))];
+                (*th)[pos.side_to_move()][bestMove.from_to()] << -quietMoveMalus;
+            }
 
             workerThread.mainHistory[us][quietsSearched[i].from_to()] << -quietMoveMalus;
             update_continuation_histories(ss, pos.moved_piece(quietsSearched[i]),
