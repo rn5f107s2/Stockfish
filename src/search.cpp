@@ -1735,7 +1735,7 @@ void update_all_stats(const Position& pos,
         if (threat != Move::none()) 
         {
             ButterflyHistory *th = &workerThread.threatHistory[pos.moved_piece(threat)][threat.to_sq()][type_of(pos.piece_on(threat.to_sq()))];
-            (*th)[pos.side_to_move()][bestMove.from_to()] << quietMoveBonus;
+            (*th)[pos.side_to_move()][bestMove.from_to()] << quietMoveBonus * 2;
         }
 
         // Decrease stats for all non-best quiet moves
@@ -1748,7 +1748,7 @@ void update_all_stats(const Position& pos,
             if (threat != Move::none()) 
             {
                 ButterflyHistory *th = &workerThread.threatHistory[pos.moved_piece(threat)][threat.to_sq()][type_of(pos.piece_on(threat.to_sq()))];
-                (*th)[pos.side_to_move()][bestMove.from_to()] << -quietMoveMalus;
+                (*th)[pos.side_to_move()][bestMove.from_to()] << -quietMoveMalus * 2;
             }
 
             workerThread.mainHistory[us][quietsSearched[i].from_to()] << -quietMoveMalus;
