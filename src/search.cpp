@@ -1148,6 +1148,7 @@ moves_loop:  // When in check, search starts here
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
+                      + (*th)[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
                       + (*contHist[3])[movedPiece][move.to_sq()] - 4409;
