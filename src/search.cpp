@@ -54,9 +54,9 @@ namespace {
 
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
+Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool prevImproving) {
     Value futilityMult = 116 - 47 * noTtCutNode;
-    return (futilityMult * d - 3 * futilityMult / 2 * improving);
+    return (futilityMult * d - (6 + prevImproving) * futilityMult / 4 * improving);
 }
 
 constexpr int futility_move_count(bool improving, Depth depth) {
@@ -522,7 +522,7 @@ Value Search::Worker::search(
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool     givesCheck, improving, priorCapture;
+    bool     givesCheck, priorCapture;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
@@ -688,7 +688,7 @@ Value Search::Worker::search(
     {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
-        improving             = false;
+        ss->improving             = false;
         goto moves_loop;
     }
     else if (excludedMove)
@@ -734,12 +734,12 @@ Value Search::Worker::search(
               << bonus / 4;
     }
 
-    // Set up the improving flag, which is true if current static evaluation is
+    // Set up the ss->improving flag, which is true if current static evaluation is
     // bigger than the previous static evaluation at our turn (if we were in
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
-    // false otherwise. The improving flag is used in various pruning heuristics.
-    improving = (ss - 2)->staticEval != VALUE_NONE
+    // false otherwise. The ss->improving flag is used in various pruning heuristics.
+    ss->improving = (ss - 2)->staticEval != VALUE_NONE
                 ? ss->staticEval > (ss - 2)->staticEval
                 : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
@@ -757,7 +757,7 @@ Value Search::Worker::search(
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 11
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving)
+        && eval - futility_margin(depth, cutNode && !ss->ttHit, ss->improving, (ss-2)->improving)
                - (ss - 1)->statScore / 327
              >= beta
         && eval >= beta && eval < 28702  // smaller than TB wins
@@ -820,7 +820,7 @@ Value Search::Worker::search(
     if (cutNode && depth >= 8 && !ttMove)
         depth -= 2;
 
-    probCutBeta = beta + 182 - 68 * improving;
+    probCutBeta = beta + 182 - 68 * ss->improving;
 
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
@@ -943,7 +943,7 @@ moves_loop:  // When in check, search starts here
 
         int delta = beta - alpha;
 
-        Depth r = reduction(improving, depth, moveCount, delta);
+        Depth r = reduction(ss->improving, depth, moveCount, delta);
 
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
@@ -951,7 +951,7 @@ moves_loop:  // When in check, search starts here
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving, depth);
+                moveCountPruning = moveCount >= futility_move_count(ss->improving, depth);
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
