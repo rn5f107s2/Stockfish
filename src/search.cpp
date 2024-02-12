@@ -949,7 +949,7 @@ moves_loop:  // When in check, search starts here
             if (!moveCountPruning)
             {
                 int fmc = futility_move_count(improving, depth);
-                int cap = fmc / 6;
+                int cap = fmc / 4;
                 fmc -= std::clamp((alpha - ss->staticEval) / 50, -cap, cap);
                 moveCountPruning = moveCount >= fmc;
             }
