@@ -1025,7 +1025,7 @@ Key Position::key_after(Move m) const {
 // Tests if the SEE (Static Exchange Evaluation)
 // value of move is greater or equal to the given threshold. We'll use an
 // algorithm similar to alpha-beta pruning with a null window.
-bool Position::see_ge(Move m, int threshold) const {
+bool Position::see_ge(Move m, int threshold, bool oppMove) const {
 
     assert(m.is_ok());
 
@@ -1039,13 +1039,15 @@ bool Position::see_ge(Move m, int threshold) const {
     if (swap < 0)
         return false;
 
-    swap = PieceValue[piece_on(from)] - swap;
-    if (swap <= 0)
-        return true;
+    if (!oppMove) 
+    {
+        swap = PieceValue[piece_on(from)] - swap;
+        if (swap <= 0)
+            return true;
+    }
 
-    assert(color_of(piece_on(from)) == sideToMove);
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
-    Color    stm       = sideToMove;
+    Color    stm       = oppMove ? ~sideToMove : sideToMove;
     Bitboard attackers = attackers_to(to, occupied);
     Bitboard stmAttackers, bb;
     int      res = 1;

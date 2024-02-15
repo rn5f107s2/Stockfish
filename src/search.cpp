@@ -791,6 +791,7 @@ Value Search::Worker::search(
 
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
 
+        ss->currentMove = Move::none();
         pos.undo_null_move();
 
         // Do not return unproven mate or TB scores
@@ -889,10 +890,33 @@ moves_loop:  // When in check, search starts here
 
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
     probCutBeta = beta + 452;
-    if (ss->inCheck && !PvNode && ttCapture && (tte->bound() & BOUND_LOWER)
-        && tte->depth() >= depth - 4 && ttValue >= probCutBeta
-        && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
-        return probCutBeta;
+
+    if (   !PvNode 
+        && ss->inCheck)
+    {
+        if (   ttCapture 
+            && (tte->bound() & BOUND_LOWER)
+            && tte->depth() >= depth - 4 
+            && ttValue >= probCutBeta
+            && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY 
+            && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
+            return probCutBeta;
+
+        if (   !ss->ttHit
+            && ss->currentMove != Move::null()
+            && abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
+            && !pos.see_ge(Move::make<NORMAL>(prevSq, prevSq), PawnValue - KnightValue, true))
+        {
+            ss->currentMove = Move::null();
+
+            value = search<NonPV>(pos, ss, probCutBeta - 1, probCutBeta, depth - 4, cutNode);
+
+            ss->currentMove = Move::none();
+
+            if (value >= probCutBeta)
+                return probCutBeta;
+        }
+    }
 
     const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
                                         (ss - 2)->continuationHistory,
