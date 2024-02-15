@@ -1103,7 +1103,45 @@ moves_loop:  // When in check, search starts here
 
         // Step 16. Make the move
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
+
+        probCutBeta = beta + 200;
+
+        bool doProb =   !PvNode
+                     && ss->inCheck
+                     && (!ttMove || ttCapture)
+                     && moveCount == 1
+                     && !extension
+                     && depth > 4
+                     && capture
+                     && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
+                     &&  !(   ttValue != VALUE_NONE 
+                           && tte->depth() >= depth - 3 
+                           && ttValue < probCutBeta)
+                     && pos.see_ge(move, probCutBeta + (ss-1)->staticEval + 100);
+
         pos.do_move(move, st, givesCheck);
+
+        if (doProb)
+        {
+            value = -qsearch<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1);
+
+            // If the qsearch held, perform the regular search
+            if (value >= probCutBeta)
+                value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4, !cutNode);
+
+            if (value >= probCutBeta)
+                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4, !cutNode);
+
+            if (value >= probCutBeta)
+            {
+                pos.undo_move(move);
+
+                // Save ProbCut data into transposition table
+                tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, unadjustedStaticEval, tt.generation());
+                    return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - 200
+                                                                     : value;
+            }
+        }
 
         // Decrease reduction if position is or has been on the PV (~5 Elo)
         if (ss->ttPv)
