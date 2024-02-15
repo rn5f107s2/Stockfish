@@ -55,9 +55,9 @@ namespace {
 
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
+Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
     Value futilityMult = 117 - 44 * noTtCutNode;
-    return (futilityMult * d - 3 * futilityMult / 2 * improving);
+    return (futilityMult * d - 3 * futilityMult / 2 * improving - futilityMult * oppWorsening / 4);
 }
 
 constexpr int futility_move_count(bool improving, Depth depth) {
@@ -759,7 +759,7 @@ Value Search::Worker::search(
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 11
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving)
+        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, ss->staticEval + (ss-1)->staticEval > 0)
                - (ss - 1)->statScore / 314
              >= beta
         && eval >= beta && eval < 30016  // smaller than TB wins
