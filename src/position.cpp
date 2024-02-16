@@ -1035,16 +1035,15 @@ bool Position::see_ge(Move m, int threshold, bool oppMove) const {
 
     Square from = m.from_sq(), to = m.to_sq();
 
-    int swap = PieceValue[piece_on(to)] - threshold;
+    Piece captured = oppMove ? NO_PIECE : piece_on(to);
+
+    int swap = PieceValue[captured] - threshold;
     if (swap < 0)
         return false;
 
-    if (!oppMove) 
-    {
-        swap = PieceValue[piece_on(from)] - swap;
-        if (swap <= 0)
-            return true;
-    }
+    swap = PieceValue[piece_on(from)] - swap;
+    if (swap <= 0)
+        return true;
 
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
     Color    stm       = oppMove ? ~sideToMove : sideToMove;

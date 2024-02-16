@@ -533,7 +533,7 @@ Value Search::Worker::search(
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool     givesCheck, improving, priorCapture;
+    bool     givesCheck, improving, priorCapture, inCheckProbCut;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
@@ -693,6 +693,7 @@ Value Search::Worker::search(
 
     // Step 6. Static evaluation of the position
     Value unadjustedStaticEval = VALUE_NONE;
+    inCheckProbCut = ss->currentMove == Move::null();
     if (ss->inCheck)
     {
         // Skip early pruning when in check
@@ -941,6 +942,9 @@ moves_loop:  // When in check, search starts here
         assert(move.is_ok());
 
         if (move == excludedMove)
+            continue;
+
+        if (inCheckProbCut && !pos.capture_stage(move))
             continue;
 
         // Check for legality
@@ -1363,7 +1367,7 @@ moves_loop:  // When in check, search starts here
 
     // Write gathered information in transposition table
     // Static evaluation is saved as it was before correction history
-    if (!excludedMove && !(rootNode && thisThread->pvIdx))
+    if (!excludedMove && (!inCheckProbCut || bestValue >= beta) && !(rootNode && thisThread->pvIdx))
         tte->save(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv,
                   bestValue >= beta    ? BOUND_LOWER
                   : PvNode && bestMove ? BOUND_EXACT
