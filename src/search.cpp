@@ -440,6 +440,10 @@ void Search::Worker::iterative_deepening() {
             if (rootMoves.size() == 1)
                 totalTime = std::min(500.0, totalTime);
 
+            if (   rootPos.has_game_cycle(0) 
+                && rootMoves[0].score / 2 == 0)
+                totalTime = mainThread->tm.maximum();
+
             if (completedDepth >= 10 && nodesEffort >= 95
                 && mainThread->tm.elapsed(threads.nodes_searched()) > totalTime * 3 / 4
                 && !mainThread->ponder)
