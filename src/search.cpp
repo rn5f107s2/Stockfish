@@ -944,7 +944,8 @@ moves_loop:  // When in check, search starts here
 
         int delta = beta - alpha;
 
-        Depth r = reduction(improving, depth, moveCount, delta);
+        int red = reduction(improving, depth, moveCount, delta);
+        Depth r = red / 1024;
 
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
@@ -955,6 +956,7 @@ moves_loop:  // When in check, search starts here
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
+            int fractLmrDepth = (newDepth * 1024) - red;
             int lmrDepth = newDepth - r;
 
             if (capture || givesCheck)
@@ -994,7 +996,7 @@ moves_loop:  // When in check, search starts here
                 // Futility pruning: parent node (~13 Elo)
                 if (!ss->inCheck && lmrDepth < 15
                     && ss->staticEval + (bestValue < ss->staticEval - 57 ? 144 : 57)
-                           + 121 * lmrDepth
+                           + (121 * fractLmrDepth) / 1024
                          <= alpha)
                     continue;
 
@@ -1618,9 +1620,9 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     return bestValue;
 }
 
-Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
+int Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     int reductionScale = reductions[d] * reductions[mn];
-    return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
+    return (reductionScale + 1118 - delta * 793 / rootDelta) + (!i && reductionScale > 863) * 1024;
 }
 
 namespace {
