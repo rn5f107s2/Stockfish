@@ -53,20 +53,11 @@ using namespace Search;
 
 namespace {
 
-int worseningMarginDiv = 341;
-int worseningMarginDivImprDiff = 0;
-int worseningThreshold = 0;
-
-TUNE(SetRange(0, 150), worseningThreshold);
-TUNE(SetRange(0, 1024), worseningMarginDiv);
-TUNE(SetRange(-1024, 1024), worseningMarginDivImprDiff);
-
-
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
     Value futilityMult = 117 - 44 * noTtCutNode;
     Value improvingDeduction = 3 * improving * futilityMult / 2;
-    Value worseningDeduction = (worseningMarginDiv + worseningMarginDivImprDiff * improving) * oppWorsening * futilityMult / 1024;
+    Value worseningDeduction = (331 + 45 * improving) * oppWorsening * futilityMult / 1024;
 
     return futilityMult * d - improvingDeduction - worseningDeduction;
 }
@@ -756,7 +747,7 @@ Value Search::Worker::search(
                 ? ss->staticEval > (ss - 2)->staticEval
                 : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
-    opponenWorsening = ss->staticEval + (ss-1)->staticEval > worseningThreshold && (depth != 2 || !improving);
+    opponenWorsening = ss->staticEval + (ss-1)->staticEval > 2 && (depth != 2 || !improving);
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
