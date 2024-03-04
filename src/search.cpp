@@ -755,13 +755,24 @@ Value Search::Worker::search(
 
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
-    if (!ss->ttPv && depth < 11
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving)
-               - (ss - 1)->statScore / 314
-             >= beta
-        && eval >= beta && eval < 30016  // smaller than TB wins
+    if (   !ss->ttPv 
+        && depth < 11
+        && eval >= beta 
+        && eval < 30016  // smaller than TB wins
         && (!ttMove || ttCapture))
-        return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+    {
+        Value futilityMargin = beta + futility_margin(depth, cutNode && !ss->ttHit, improving) + (ss - 1)->statScore / 314;
+
+        if (eval >= futilityMargin)
+            return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+
+        futilityMargin += 200;
+
+        value = qsearch<NonPV>(pos, ss, futilityMargin - 1, futilityMargin);
+
+        if (value >= futilityMargin)
+            return value;
+    }
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 16620
