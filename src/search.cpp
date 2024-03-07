@@ -54,12 +54,13 @@ using namespace Search;
 namespace {
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
+Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening, bool ttHitNoTtValue) {
     Value futilityMult       = 117 - 44 * noTtCutNode;
     Value improvingDeduction = 3 * improving * futilityMult / 2;
     Value worseningDeduction = (331 + 45 * improving) * oppWorsening * futilityMult / 1024;
+    Value noTtValueDeduction = ttHitNoTtValue * futilityMult / 3;
 
-    return futilityMult * d - improvingDeduction - worseningDeduction;
+    return futilityMult * d - improvingDeduction - worseningDeduction - noTtValueDeduction;
 }
 
 constexpr int futility_move_count(bool improving, Depth depth) {
@@ -540,7 +541,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponenWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, noTtCutNode, ttHitNoTtValue;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -749,6 +750,8 @@ Value Search::Worker::search(
                 : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
     opponenWorsening = ss->staticEval + (ss - 1)->staticEval > 2 && (depth != 2 || !improving);
+    noTtCutNode      = !ss->ttHit && cutNode;
+    ttHitNoTtValue   = ss->ttHit && ttValue == VALUE_NONE;
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -764,7 +767,7 @@ Value Search::Worker::search(
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 11
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, opponenWorsening)
+        && eval - futility_margin(depth, noTtCutNode, improving, opponenWorsening, ttHitNoTtValue)
                - (ss - 1)->statScore / 314
              >= beta
         && eval >= beta && eval < 30016  // smaller than TB wins
