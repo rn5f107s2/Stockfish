@@ -125,7 +125,8 @@ void update_all_stats(const Position& pos,
                       int             quietCount,
                       Move*           capturesSearched,
                       int             captureCount,
-                      Depth           depth);
+                      Depth           depth,
+                      bool            inQs = false);
 
 }  // namespace
 
@@ -488,7 +489,8 @@ void Search::Worker::iterative_deepening() {
 void Search::Worker::clear() {
     counterMoves.fill(Move::none());
     mainHistory.fill(0);
-    captureHistory.fill(0);
+    captureHistory[0].fill(0); // This is the top of the diff so explain this here as well, captureHistory is split into an array of two captureHistorys,
+    captureHistory[1].fill(0); // captureHistory[0] being the one used in mainsearch, captureHistory[1] being the one used in qs
     pawnHistory.fill(0);
     correctionHistory.fill(0);
 
@@ -839,7 +841,7 @@ Value Search::Worker::search(
     {
         assert(probCutBeta < VALUE_INFINITE && probCutBeta > beta);
 
-        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &thisThread->captureHistory);
+        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &thisThread->captureHistory[0]);
 
         while ((move = mp.next_move()) != Move::none())
             if (move != excludedMove && pos.legal(move))
@@ -899,7 +901,7 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
-    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
+    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory[0],
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
@@ -968,7 +970,7 @@ moves_loop:  // When in check, search starts here
                     Piece capturedPiece = pos.piece_on(move.to_sq());
                     int   futilityEval =
                       ss->staticEval + 287 + 277 * lmrDepth + PieceValue[capturedPiece]
-                      + thisThread->captureHistory[movedPiece][move.to_sq()][type_of(capturedPiece)]
+                      + thisThread->captureHistory[0][movedPiece][move.to_sq()][type_of(capturedPiece)]
                           / 7;
                     if (futilityEval < alpha)
                         continue;
@@ -1085,8 +1087,8 @@ moves_loop:  // When in check, search starts here
 
             // Recapture extensions (~0 Elo on STC, ~1 Elo on LTC)
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
-                     && thisThread->captureHistory[movedPiece][move.to_sq()]
-                                                  [type_of(pos.piece_on(move.to_sq()))]
+                     && thisThread->captureHistory[0][movedPiece][move.to_sq()]
+                                                     [type_of(pos.piece_on(move.to_sq()))]
                           > 3807)
                 extension = 1;
         }
@@ -1390,11 +1392,11 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
     TTEntry* tte;
     Key      posKey;
-    Move     ttMove, move, bestMove;
+    Move     ttMove, move, bestMove, capturesSearched[32];
     Depth    ttDepth;
     Value    bestValue, value, ttValue, futilityValue, futilityBase;
     bool     pvHit, givesCheck, capture;
-    int      moveCount;
+    int      moveCount, captureCount;
     Color    us = pos.side_to_move();
 
     // Step 1. Initialize node
@@ -1407,7 +1409,11 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     Worker* thisThread = this;
     bestMove           = Move::none();
     ss->inCheck        = pos.checkers();
-    moveCount          = 0;
+
+    moveCount = captureCount = 0;
+
+    if (ss->ply > thisThread->selDepth) // Update seldepth like its done in clarity for qs depth estimate
+        thisThread->selDepth = ss->ply;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && thisThread->selDepth < ss->ply + 1)
@@ -1491,7 +1497,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     // queen promotions, and other checks (only if depth >= DEPTH_QS_CHECKS)
     // will be generated.
     Square     prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
-    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
+    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory[1], //In qs use captHist[1] (the qs specific captHist)
                   contHist, &thisThread->pawnHistory);
 
     int quietCheckEvasions = 0;
@@ -1601,7 +1607,25 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                     break;  // Fail high
             }
         }
+
+        if (pos.capture_stage(move))
+            capturesSearched[captureCount++] = move; // Add the move to capturesSearched if it was a capture, this is used to apply mala later on
     }
+
+    if (pos.capture_stage(bestMove))
+        update_all_stats(pos, 
+                         ss, 
+                         *this, 
+                         bestMove, 
+                         bestValue, 
+                         beta, 
+                         SQ_NONE, 
+                         nullptr, // Only used for quiet bestmove
+                         0, 
+                         capturesSearched, 
+                         captureCount, 
+                         thisThread->selDepth - ss->ply, //depth estimate
+                         true);
 
     // Step 9. Check for mate
     // All legal moves have been searched. A special case: if we're in check
@@ -1705,18 +1729,22 @@ void update_all_stats(const Position& pos,
                       int             quietCount,
                       Move*           capturesSearched,
                       int             captureCount,
-                      Depth           depth) {
+                      Depth           depth,
+                      bool            inQs) {
 
     Color                  us             = pos.side_to_move();
-    CapturePieceToHistory& captureHistory = workerThread.captureHistory;
+    CapturePieceToHistory& captureHistory = workerThread.captureHistory[inQs]; // If this was called from qs use qsHistory else the normal one
     Piece                  moved_piece    = pos.moved_piece(bestMove);
     PieceType              captured;
 
     int quietMoveBonus = stat_bonus(depth + 1);
     int quietMoveMalus = stat_malus(depth);
 
-    if (!pos.capture_stage(bestMove))
+    if (!pos.capture_stage(bestMove)) 
     {
+        assert(!inQs); // As there is a guard for the qs update call, the bestmove in qs should always be a capture, 
+                       // if its not that would be bad as a nullpointer is passed for quietsSearched
+
         int bestMoveBonus = bestValue > beta + 185 ? quietMoveBonus      // larger bonus
                                                    : stat_bonus(depth);  // smaller bonus
 
@@ -1742,7 +1770,7 @@ void update_all_stats(const Position& pos,
     {
         // Increase stats for the best move in case it was a capture move
         captured = type_of(pos.piece_on(bestMove.to_sq()));
-        captureHistory[moved_piece][bestMove.to_sq()][captured] << quietMoveBonus;
+        captureHistory[moved_piece][bestMove.to_sq()][captured] << quietMoveBonus; // As captureHistory is set to the correct one at the top of this function, the correct one is updated ( << is the sf way of applying a bonus / malus to a history)
     }
 
     // Extra penalty for a quiet early move that was not a TT move or
@@ -1750,7 +1778,7 @@ void update_all_stats(const Position& pos,
     if (prevSq != SQ_NONE
         && ((ss - 1)->moveCount == 1 + (ss - 1)->ttHit
             || ((ss - 1)->currentMove == (ss - 1)->killers[0]))
-        && !pos.captured_piece())
+        && !pos.captured_piece() && !inQs) // Dont bother with this when updating from qs
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq, -quietMoveMalus);
 
     // Decrease stats for all non-best capture moves
