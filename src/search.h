@@ -194,7 +194,8 @@ class Worker {
     // Public because they need to be updatable by the stats
     CounterMoveHistory    counterMoves;
     ButterflyHistory      mainHistory;
-    CapturePieceToHistory captureHistory;
+    CapturePieceToHistory captureHistory[2]; // Make captureHistory into an array of captureHistorys, captHist[0] being the captHist used in main search, 
+                                             // captHist[1] being the one used in qs
     ContinuationHistory   continuationHistory[2][2];
     PawnHistory           pawnHistory;
     CorrectionHistory     correctionHistory;
