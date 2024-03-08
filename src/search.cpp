@@ -1336,6 +1336,14 @@ moves_loop:  // When in check, search starts here
     if (bestValue <= alpha)
         ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3);
 
+    if (   !PvNode
+        && ss->ttHit
+        && !excludedMove
+        && tte->depth() > depth
+        && bestValue <= alpha
+        && (tte->bound() & (ttValue >= bestValue ? BOUND_LOWER : BOUND_UPPER)))
+        bestValue = ttValue;
+
     // Write gathered information in transposition table
     // Static evaluation is saved as it was before correction history
     if (!excludedMove && !(rootNode && thisThread->pvIdx))
