@@ -748,6 +748,17 @@ Value Search::Worker::search(
 
     opponentWorsening = ss->staticEval + (ss - 1)->staticEval > 2;
 
+    if (   (ss-1)->currentMove == Move::null()
+        && !improving
+        && (ss-2)->currentMove.is_ok()
+        && !(ss-2)->inCheck
+        && type_of(pos.piece_on((ss-2)->currentMove.to_sq())) != PAWN
+        && (ss-2)->currentMove.type_of() != PROMOTION)
+    {
+        int malus = (ss->staticEval - (ss-2)->staticEval) * 4;
+        thisThread->mainHistory[us][(ss-2)->currentMove.from_to()] << malus;
+    }
+
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
