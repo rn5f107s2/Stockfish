@@ -897,6 +897,24 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
+    if constexpr (rootNode) 
+    {
+        RootMove* bestMoves[3]{};
+
+        for (RootMove &rm : thisThread->rootMoves) 
+            for (int i = 0; i < 3; i++)
+                if ((!bestMoves[i] || bestMoves[i]->lastBestDepth < rm.lastBestDepth) && !pos.capture_stage(rm.pv[0]))
+                    bestMoves[i] = &rm;
+    
+
+        for (int i = 0; i < 2; i++)
+            if (bestMoves[i])
+                ss->killers[i] = bestMoves[i]->pv[0];
+
+        if (bestMoves[2])
+            countermove = bestMoves[2]->pv[0];
+    }
+
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
 
@@ -1217,6 +1235,7 @@ moves_loop:  // When in check, search starts here
                 rm.score = rm.uciScore = value;
                 rm.selDepth            = thisThread->selDepth;
                 rm.scoreLowerbound = rm.scoreUpperbound = false;
+                rm.lastBestDepth   = depth;
 
                 if (value >= beta)
                 {
