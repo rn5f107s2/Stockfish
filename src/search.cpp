@@ -1235,7 +1235,6 @@ moves_loop:  // When in check, search starts here
                 rm.score = rm.uciScore = value;
                 rm.selDepth            = thisThread->selDepth;
                 rm.scoreLowerbound = rm.scoreUpperbound = false;
-                rm.lastBestDepth   = depth;
 
                 if (value >= beta)
                 {
@@ -1314,6 +1313,12 @@ moves_loop:  // When in check, search starts here
     // return a fail low score.
 
     assert(moveCount || !ss->inCheck || excludedMove || !MoveList<LEGAL>(pos).size());
+
+    if (rootNode && bestMove) {
+        RootMove& rm =
+              *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), bestMove);
+        rm.lastBestDepth = depth;
+    }
 
     // Adjust best value for fail high cases at non-pv nodes
     if (!PvNode && bestValue >= beta && std::abs(bestValue) < VALUE_TB_WIN_IN_MAX_PLY
