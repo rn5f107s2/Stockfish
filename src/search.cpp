@@ -541,7 +541,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, extTTM;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -553,6 +553,7 @@ Value Search::Worker::search(
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    extTTM                                                = false;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -791,6 +792,10 @@ Value Search::Worker::search(
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
 
         pos.undo_null_move();
+
+        extTTM =   eval >= ss->staticEval + 100 
+                && (ttCapture || pos.gives_check(ttMove))
+                && nullValue + 300 < eval;
 
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
@@ -1089,6 +1094,9 @@ moves_loop:  // When in check, search starts here
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4026)
+                extension = 1;
+
+            else if (move == ttMove && extTTM)
                 extension = 1;
         }
 
