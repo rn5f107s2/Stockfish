@@ -211,6 +211,8 @@ class Worker {
     PawnHistory           pawnHistory;
     CorrectionHistory     correctionHistory;
 
+    RootMoves rootMoves;
+
    private:
     void iterative_deepening();
 
@@ -241,7 +243,6 @@ class Worker {
 
     Position  rootPos;
     StateInfo rootState;
-    RootMoves rootMoves;
     Depth     rootDepth, completedDepth;
     Value     rootDelta;
 

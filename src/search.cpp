@@ -437,8 +437,16 @@ void Search::Worker::iterative_deepening() {
                                / 10000.0;
             fallingEval = std::clamp(fallingEval, 0.580, 1.667);
 
+            int threadConsenus = -1;
+
+            for (Thread* th : threads)
+                threadConsenus +=    th->worker->completedDepth >= 1 
+                                && th->worker->rootMoves[0].pv[0] == this->rootMoves[0].pv[0];
+
+            threadConsenus = (threadConsenus - (threads.size() / 2)) / std::max(int(threads.size() / 4), 1);
+
             // If the bestMove is stable over several iterations, reduce time accordingly
-            timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.495 : 0.687;
+            timeReduction    = lastBestMoveDepth + 8 + threadConsenus < completedDepth ? 1.495 : 0.687;
             double reduction = (1.48 + mainThread->previousTimeReduction) / (2.17 * timeReduction);
             double bestMoveInstability = 1 + 1.88 * totBestMoveChanges / threads.size();
             int    el                  = std::clamp((bestValue + 750) / 150, 0, 9);
