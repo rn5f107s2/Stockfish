@@ -404,6 +404,8 @@ void Search::Worker::iterative_deepening() {
             lastBestMoveDepth = rootDepth;
         }
 
+        lastBestMove = rootMoves[0].pv[0];
+
         if (!mainThread)
             continue;
 
@@ -440,8 +442,8 @@ void Search::Worker::iterative_deepening() {
             int threadConsenus = -1;
 
             for (Thread* th : threads)
-                threadConsenus +=    th->worker->completedDepth >= 1 
-                                && th->worker->rootMoves[0].pv[0] == this->rootMoves[0].pv[0];
+                threadConsenus +=  th->worker->completedDepth >= 1 
+                                && th->worker->lastBestMove == this->lastBestMove;
 
             threadConsenus = (threadConsenus - (threads.size() / 2)) / std::max(int(threads.size() / 4), 1);
 

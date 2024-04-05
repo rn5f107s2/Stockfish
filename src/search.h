@@ -211,7 +211,7 @@ class Worker {
     PawnHistory           pawnHistory;
     CorrectionHistory     correctionHistory;
 
-    RootMoves rootMoves;
+    Move lastBestMove = Move::none();
 
    private:
     void iterative_deepening();
@@ -245,6 +245,7 @@ class Worker {
     StateInfo rootState;
     Depth     rootDepth, completedDepth;
     Value     rootDelta;
+    RootMoves rootMoves;
 
     size_t thread_idx;
 
