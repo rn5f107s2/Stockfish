@@ -213,6 +213,9 @@ void Search::Worker::start_searching() {
     std::cout << sync_endl;
 }
 
+int adjustments[10] = {1531, 1531, 1531, 1531, 1531, 1531, 1531, 1531, 1531, 703};
+TUNE(SetRange(1, 2048), adjustments);
+
 // Main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
 // consumed, the user stops the search, or the maximum search depth is reached.
@@ -439,8 +442,6 @@ void Search::Worker::iterative_deepening() {
 
             // If the bestMove is stable over several iterations, reduce time accordingly
             //timeReduction  = lastBestMoveDepth + 8 < completedDepth ? 1.495 : 0.687;
-
-            int adjustments[10] = {1477, 1476, 1475, 1471, 1461, 1435, 1373, 1242, 1039, 837};
 
             timeReduction    = float(adjustments[std::min(completedDepth - lastBestMoveDepth, 9)]) / 1024.0f;
             double reduction = (1.48 + mainThread->previousTimeReduction) / (2.17 * timeReduction);
