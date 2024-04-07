@@ -228,8 +228,8 @@ void Search::Worker::iterative_deepening() {
     Value  alpha, beta;
     Value  bestValue     = -VALUE_INFINITE;
     Color  us            = rootPos.side_to_move();
-    double timeReduction = 1, totBestMoveChanges = 0;
-    int    delta, iterIdx                        = 0;
+    double totBestMoveChanges = 0;
+    int    delta, iterIdx     = 0;
 
     // Allocate stack with extra size to allow access from (ss - 7) to (ss + 2):
     // (ss - 7) is needed for update_continuation_histories(ss - 1) which accesses (ss - 6),
@@ -436,11 +436,10 @@ void Search::Worker::iterative_deepening() {
             fallingEval = std::clamp(fallingEval, 0.580, 1.667);
 
             // If the bestMove is stable over several iterations, reduce time accordingly
-            double reduction = (1.48 + mainThread->previousTimeReduction) / (2.17 * 1.381);
             double bestMoveInstability = 1 + 1.88 * totBestMoveChanges / threads.size();
             int    el                  = std::clamp((bestValue + 750) / 150, 0, 9);
 
-            double totalTime = mainThread->tm.optimum() * fallingEval * reduction
+            double totalTime = mainThread->tm.optimum() * fallingEval
                              * bestMoveInstability * EvalLevel[el];
 
             // Cap used time in case of a single legal move for a better viewer experience
@@ -474,8 +473,6 @@ void Search::Worker::iterative_deepening() {
 
     if (!mainThread)
         return;
-
-    mainThread->previousTimeReduction = timeReduction;
 
     // If the skill level is enabled, swap the best PV line with the sub-optimal one
     if (skill.enabled())

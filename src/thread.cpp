@@ -160,7 +160,6 @@ void ThreadPool::clear() {
     main_manager()->callsCnt                 = 0;
     main_manager()->bestPreviousScore        = VALUE_INFINITE;
     main_manager()->bestPreviousAverageScore = VALUE_INFINITE;
-    main_manager()->previousTimeReduction    = 1.0;
     main_manager()->tm.clear();
 }
 
