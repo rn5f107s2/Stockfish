@@ -211,9 +211,6 @@ void Search::Worker::start_searching() {
     main_manager()->updates.onBestmove(bestmove, ponder);
 }
 
-int adjustments[10] = {704, 705, 705, 707, 716, 750, 866, 1121, 1375, 1490};
-TUNE(SetRange(1, 2048), adjustments);
-
 // Main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
 // consumed, the user stops the search, or the maximum search depth is reached.
@@ -437,6 +434,8 @@ void Search::Worker::iterative_deepening() {
                                   + 97 * (mainThread->iterValue[iterIdx] - bestValue))
                                / 10000.0;
             fallingEval = std::clamp(fallingEval, 0.580, 1.667);
+
+            int adjustments[10] = {723, 777, 715, 744, 709, 710, 942, 1123, 1351, 1455};
 
             // If the bestMove is stable over several iterations, reduce time accordingly
             timeReduction    = float(adjustments[std::min(completedDepth - lastBestMoveDepth, 9)]) / 1024.0f;
