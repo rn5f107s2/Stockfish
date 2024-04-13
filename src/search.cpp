@@ -56,8 +56,8 @@ static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
                                          1.002, 0.992, 0.947, 1.046, 1.001};
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
-    Value futilityMult       = 118 - 44 * noTtCutNode;
+Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening, int rmc) {
+    Value futilityMult       = 118 - std::max(44 * noTtCutNode, rmc - 3);
     Value improvingDeduction = 52 * improving * futilityMult / 32;
     Value worseningDeduction = (310 + 48 * improving) * oppWorsening * futilityMult / 1024;
 
@@ -764,7 +764,7 @@ Value Search::Worker::search(
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 12
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, opponentWorsening)
+        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, opponentWorsening, thisThread->rootMoveCount)
                - (ss - 1)->statScore / 284
              >= beta
         && eval >= beta && eval < VALUE_TB_WIN_IN_MAX_PLY && (!ttMove || ttCapture))
@@ -927,6 +927,9 @@ moves_loop:  // When in check, search starts here
             continue;
 
         ss->moveCount = ++moveCount;
+
+        if constexpr (rootNode)
+            thisThread->rootMoveCount = moveCount;
 
         if (rootNode && is_mainthread()
             && main_manager()->tm.elapsed(threads.nodes_searched()) > 3000)
