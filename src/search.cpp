@@ -57,7 +57,7 @@ static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
 
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening, int rmc) {
-    Value futilityMult       = 118 - std::max(44 * noTtCutNode, rmc - 3);
+    Value futilityMult       = 118 - std::max(44 * noTtCutNode, rmc * (rmc > 2));
     Value improvingDeduction = 52 * improving * futilityMult / 32;
     Value worseningDeduction = (310 + 48 * improving) * oppWorsening * futilityMult / 1024;
 
