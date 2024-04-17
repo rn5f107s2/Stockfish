@@ -1621,7 +1621,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                          0, 
                          capturesSearched, 
                          captureCount, 
-                         3, //depth estimate
+                         5 - std::min(depth, 4), //depth estimate
                          true);
 
     // Step 9. Check for mate
