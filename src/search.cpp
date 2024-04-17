@@ -64,7 +64,8 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorseni
     return futilityMult * d - improvingDeduction - worseningDeduction;
 }
 
-constexpr int futility_move_count(bool improving, Depth depth) {
+template<bool improving>
+constexpr int futility_move_count(Depth depth) {
     return improving ? (3 + depth * depth) : (3 + depth * depth) / 2;
 }
 
@@ -905,6 +906,8 @@ moves_loop:  // When in check, search starts here
     value            = bestValue;
     moveCountPruning = false;
 
+    auto* mcpMargin = improving ? &futility_move_count<true> : &futility_move_count<false>;
+
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move(moveCountPruning)) != Move::none())
@@ -955,7 +958,7 @@ moves_loop:  // When in check, search starts here
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving, depth);
+                moveCountPruning = moveCount >= mcpMargin(depth);
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
