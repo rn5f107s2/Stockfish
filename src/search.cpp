@@ -1412,9 +1412,6 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
     moveCount = captureCount = 0;
 
-    if (ss->ply > thisThread->selDepth) // Update seldepth like its done in clarity for qs depth estimate
-        thisThread->selDepth = ss->ply;
-
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && thisThread->selDepth < ss->ply + 1)
         thisThread->selDepth = ss->ply + 1;
@@ -1624,7 +1621,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                          0, 
                          capturesSearched, 
                          captureCount, 
-                         thisThread->selDepth - ss->ply, //depth estimate
+                         3, //depth estimate
                          true);
 
     // Step 9. Check for mate
