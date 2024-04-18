@@ -967,7 +967,7 @@ moves_loop:  // When in check, search starts here
                 {
                     Piece capturedPiece = pos.piece_on(move.to_sq());
                     int   futilityEval =
-                      ss->staticEval + 287 + 277 * lmrDepth + PieceValue[capturedPiece]
+                      ss->staticEval + 237 + 100 * (mp.stage == 2) + 277 * lmrDepth + PieceValue[capturedPiece]
                       + thisThread->captureHistory[movedPiece][move.to_sq()][type_of(capturedPiece)]
                           / 7;
                     if (futilityEval < alpha)
