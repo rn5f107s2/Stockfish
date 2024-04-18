@@ -750,6 +750,20 @@ Value Search::Worker::search(
 
     opponentWorsening = ss->staticEval + (ss - 1)->staticEval > 2;
 
+    if (   !ttMove
+        && priorCapture) 
+    {
+        ss->currentMove = Move::none();
+
+        value = qsearch<NonPV>(pos, ss, ss->staticEval, ss->staticEval + 1);
+
+        if (value > ss->staticEval) 
+        {
+            ttMove    = ss->currentMove;
+            ttCapture = ttMove && pos.capture_stage(ttMove); 
+        }
+    }
+
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
