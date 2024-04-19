@@ -147,8 +147,8 @@ void MovePicker::score() {
 
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-    [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
-      threatenedPieces;
+    [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedSquares,
+      threatenedPieces, protectedByUs;
     if constexpr (Type == QUIETS)
     {
         Color us = pos.side_to_move();
@@ -158,10 +158,23 @@ void MovePicker::score() {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
         threatenedByRook = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
 
+        threatenedSquares = threatenedByPawn 
+                          | threatenedByMinor 
+                          | threatenedByRook
+                          | pos.attacks_by<QUEEN>(~us)
+                          | pos.attacks_by<KING>(~us);
+
         // Pieces threatened by pieces of lesser material value
         threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+        protectedByUs = pos.attacks_by<PAWN  , true>(us)
+                      | pos.attacks_by<KNIGHT, true>(us)
+                      | pos.attacks_by<BISHOP, true>(us)
+                      | pos.attacks_by<ROOK  , true>(us)
+                      | pos.attacks_by<QUEEN , true>(us)
+                      | pos.attacks_by<KING  , true>(us);
     }
 
     for (auto& m : *this)
@@ -204,6 +217,15 @@ void MovePicker::score() {
                           : pt != PAWN ? bool(to & threatenedByPawn) * 14950
                                        : 0)
                        : 0;
+
+            // Kings cant move to threatened squares, so set the malus as large as possible 
+            // (while not risking overflows) to avoid the legality check
+            const int mali[6] = {5000, 15000, 15000, 25000, 50000, 999999};
+
+            m.value -= (   !(threatenedPieces & from) 
+                        &&  (threatenedSquares & to) 
+                        && !(protectedByUs & to)) 
+                        ? mali[int(pt) - 1] : 0;
         }
 
         else  // Type == EVASIONS
