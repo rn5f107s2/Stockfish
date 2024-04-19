@@ -123,7 +123,7 @@ class Position {
     Bitboard attackers_to(Square s) const;
     Bitboard attackers_to(Square s, Bitboard occupied) const;
     void     update_slider_blockers(Color c) const;
-    template<PieceType Pt>
+    template<PieceType Pt, bool Protected = false>
     Bitboard attacks_by(Color c) const;
 
     // Properties of moves
@@ -262,7 +262,7 @@ inline Square Position::castling_rook_square(CastlingRights cr) const {
 
 inline Bitboard Position::attackers_to(Square s) const { return attackers_to(s, pieces()); }
 
-template<PieceType Pt>
+template<PieceType Pt, bool Protected>
 inline Bitboard Position::attacks_by(Color c) const {
 
     if constexpr (Pt == PAWN)
@@ -272,8 +272,23 @@ inline Bitboard Position::attacks_by(Color c) const {
     {
         Bitboard threats   = 0;
         Bitboard attackers = pieces(c, Pt);
-        while (attackers)
-            threats |= attacks_bb<Pt>(pop_lsb(attackers), pieces());
+
+        [[maybe_unused]] Bitboard protectedOnce = 0;
+
+        while (attackers) {
+            Bitboard threatsThis = attacks_bb<Pt>(pop_lsb(attackers), pieces());
+
+            if constexpr (!Protected) {
+                threats |= threatsThis;
+                continue;
+            }
+
+            // This is necessary for non pawn pieces as they move to the squares they attack, meaning any piece always defends 
+            // the square its going to move to, meaning only pieces moving to squares atttacked twice are moving to protecetd squares
+            threats       |= threatsThis & protectedOnce;
+            protectedOnce |= threatsThis;
+        }
+
         return threats;
     }
 }
