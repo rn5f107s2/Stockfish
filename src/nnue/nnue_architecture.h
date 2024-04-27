@@ -91,6 +91,10 @@ struct NetworkArchitecture {
             && fc_2.write_parameters(stream);
     }
 
+    void setLastLayerWeights(int8_t* weightsNew) {
+        fc_2.setLastLayerWeights(weightsNew);
+    }
+
     std::int32_t propagate(const TransformedFeatureType* transformedFeatures) {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;

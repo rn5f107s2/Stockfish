@@ -150,6 +150,7 @@ class Position {
     Key key_after(Move m) const;
     Key material_key() const;
     Key pawn_key() const;
+    OWNKey ownKey;
 
     // Other properties of the position
     Color side_to_move() const;
@@ -331,6 +332,7 @@ inline void Position::put_piece(Piece pc, Square s) {
     byColorBB[color_of(pc)] |= s;
     pieceCount[pc]++;
     pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
+    ownKey.pieceCount[color_of(pc)][type_of(pc)]++;
 }
 
 inline void Position::remove_piece(Square s) {
@@ -342,6 +344,7 @@ inline void Position::remove_piece(Square s) {
     board[s] = NO_PIECE;
     pieceCount[pc]--;
     pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
+    ownKey.pieceCount[color_of(pc)][type_of(pc)]--;
 }
 
 inline void Position::move_piece(Square from, Square to) {

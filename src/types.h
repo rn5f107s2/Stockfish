@@ -38,6 +38,7 @@
 
     #include <cassert>
     #include <cstdint>
+    #include <array>
 
     #if defined(_MSC_VER)
         // Disable some silly and noisy warnings from MSVC compiler
@@ -402,6 +403,27 @@ class Move {
 
    protected:
     std::uint16_t data;
+};
+
+namespace OWN { 
+    const std::array<int, PIECE_TYPE_NB> offset = {0, 1, 9, 27, 81, 242};
+    const std::array<int, PIECE_TYPE_NB> max    = {0, 8, 2, 2, 2, 1};
+}
+
+struct OWNKey {    
+    std::array<std::array<int, PIECE_TYPE_NB>, COLOR_NB> pieceCount = {};
+
+    int count(Color c, PieceType pt) const {
+      return std::min(OWN::max[pt], pieceCount[c][pt]);
+    }
+
+    int key(Color c) const {
+        return   count(c, PAWN  ) * OWN::offset[PAWN  ]
+               + count(c, KNIGHT) * OWN::offset[KNIGHT]
+               + count(c, BISHOP) * OWN::offset[BISHOP]
+               + count(c, ROOK  ) * OWN::offset[ROOK  ]
+               + count(c, QUEEN ) * OWN::offset[QUEEN ];
+    }
 };
 
 }  // namespace Stockfish

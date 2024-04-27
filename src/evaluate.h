@@ -20,8 +20,11 @@
 #define EVALUATE_H_INCLUDED
 
 #include <string>
+#include <cstring>
 
 #include "types.h"
+#include "misc.h"
+#include "iostream"
 
 namespace Stockfish {
 
@@ -51,6 +54,98 @@ Value evaluate(const NNUE::Networks&          networks,
                Eval::NNUE::AccumulatorCaches& caches,
                int                            optimism);
 }  // namespace Eval
+
+// I have no idea how the nnue code works, thats why im doing it this way
+
+class OutputWeightNet {
+public:
+    static const int INPUT_SIZE  = 5; 
+    static const int HIDDEN_SIZE = 128;
+    static const int OUTPUT_SIZE = 32;
+
+    std::array<std::array<int8_t, HIDDEN_SIZE>, COLOR_NB> accumulator;
+    OWNKey accInputKey = OWNKey();
+
+    std::array<int8_t, INPUT_SIZE * HIDDEN_SIZE> l0Weights = {};
+    std::array<int8_t, OUTPUT_SIZE * HIDDEN_SIZE * 2> l1Weights = {};
+    std::array<int8_t, HIDDEN_SIZE> l0biases = {};
+    std::array<int8_t, OUTPUT_SIZE> l1biases = {};
+
+    static const int keyCombinations = 9 * 3 * 3 * 3 * 2;
+
+    std::array<std::array<int8_t*, keyCombinations>, keyCombinations> cache;
+
+    const std::array<int, PIECE_TYPE_NB> max = {0, 8, 2, 2, 2, 1};
+
+    OutputWeightNet() {
+        for (auto entry : cache)
+          entry.fill(nullptr);
+
+        accumulator[WHITE] = l0biases;
+        accumulator[BLACK] = l0biases;
+    }
+
+    ~OutputWeightNet() {
+        for (auto entry : cache)
+          for (auto* entry2 : entry)
+            if (entry2)
+              free(entry2);
+    }
+
+    int8_t* getWeights(const OWNKey &key, Color stm) {
+        int8_t** entry = &cache[key.key(stm)][key.key(~stm)];
+
+        if (*entry)
+          return *entry;
+
+        *entry = static_cast<int8_t*>(malloc(sizeof(int8_t) * OUTPUT_SIZE));
+
+        updateAccumulator(key);
+        forward(*entry);
+
+        return *entry;
+    }
+
+    void forward(int8_t* entry)  {
+        int8_t out[OUTPUT_SIZE];
+
+        memset(&out, 0, sizeof(int8_t) * OUTPUT_SIZE);
+
+        for (int i = 0; i < OUTPUT_SIZE; i++) {
+           for (int j = 0; j < HIDDEN_SIZE; j++) {
+              int index = i * HIDDEN_SIZE + j;
+
+              out[i] += relu(accumulator[WHITE][j]) * l1Weights[index];
+              out[i] += relu(accumulator[BLACK][j]) * l1Weights[index + OUTPUT_SIZE * HIDDEN_SIZE];
+           }
+
+           entry[i] = out[i] + l1biases[i];
+        }
+    }
+
+    int8_t relu(int8_t val) {
+        return std::max(val, int8_t(0));
+    }
+
+    void updateAccumulator(const OWNKey &newKey) {
+        for (Color c : {WHITE, BLACK}) {
+            for (PieceType pt = PAWN; pt <= QUEEN; ++pt) {
+                int diff = newKey.count(c, pt) - accInputKey.count(c, pt);
+
+                updateAccumulator(c, pt - 1, diff);
+                accInputKey.pieceCount[c][pt] += diff;
+            }
+        }
+    }
+
+    void updateAccumulator(Color c, int index, int difference) {
+        if (!difference)
+          return;
+
+        for (int i = 0; i < HIDDEN_SIZE; i++)
+            accumulator[c][i] += difference * l0Weights[index * HIDDEN_SIZE + i];
+    }
+};
 
 }  // namespace Stockfish
 

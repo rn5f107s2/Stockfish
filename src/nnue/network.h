@@ -57,7 +57,8 @@ class Network {
                    AccumulatorCaches::Cache<FTDimensions>* cache,
                    bool                                    adjusted   = false,
                    int*                                    complexity = nullptr,
-                   bool                                    psqtOnly   = false) const;
+                   bool                                    psqtOnly   = false,
+                   int8_t*                                 lastLayerWeights = nullptr) const;
 
 
     void hint_common_access(const Position&                         pos,
@@ -82,6 +83,7 @@ class Network {
 
     bool read_parameters(std::istream&, std::string&) const;
     bool write_parameters(std::ostream&, const std::string&) const;
+    void setLastLayerWeights(int8_t* weightsNew) const;
 
     // Input feature converter
     LargePagePtr<Transformer> featureTransformer;

@@ -187,6 +187,15 @@ class AffineTransform {
 
         return !stream.fail();
     }
+
+    void setLastLayerWeights(int8_t* newWeights) {
+        if constexpr (OutDims != 1)
+            return;
+
+        for (unsigned int i = 0; i < InputDimensions; i++)
+            weights[i] = newWeights[i];
+    }
+
     // Forward propagation
     void propagate(const InputType* input, OutputType* output) const {
 
