@@ -44,6 +44,100 @@ int Eval::simple_eval(const Position& pos, Color c) {
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
+const int INPUT_SIZE  = 5; 
+const int HIDDEN_SIZE = 64;
+const int OUTPUT_SIZE = 32;
+
+int l0Weights[INPUT_SIZE * HIDDEN_SIZE] = {};
+int l1Weights[OUTPUT_SIZE * HIDDEN_SIZE] = {};
+int l0biases [HIDDEN_SIZE] = {};
+int l1biases [OUTPUT_SIZE] = {};
+
+TUNE(SetRange(-7, 7), l0Weights, l0biases);
+TUNE(SetRange(-4, 4), l1Weights);
+TUNE(SetRange(-128, 127), l1biases);
+
+class OutputWeightNet {
+public:
+    int16_t accumulator[COLOR_NB][HIDDEN_SIZE];
+    OWNKey accInputKey = OWNKey();
+
+    static const int keyCombinations = 9 * 3 * 3 * 3 * 2;
+
+    std::array<std::array<int8_t*, keyCombinations>, keyCombinations> cache;
+
+    const std::array<int, PIECE_TYPE_NB> max = {0, 8, 2, 2, 2, 1};
+
+    OutputWeightNet() {
+        for (auto entry : cache)
+          entry.fill(nullptr);
+
+        for (int i = 0; i < HIDDEN_SIZE; i++)
+          accumulator[WHITE][i] = accumulator[BLACK][i] = l0biases[i];
+    }
+
+    ~OutputWeightNet() {
+        for (auto entry : cache)
+          for (auto* entry2 : entry)
+            if (entry2)
+              free(entry2);
+    }
+
+    int8_t* getWeights(const OWNKey &key, Color stm) {
+        int8_t** entry = &cache[key.key(stm)][key.key(~stm)];
+
+        if (*entry)
+          return *entry;
+
+        *entry = static_cast<int8_t*>(malloc(sizeof(int8_t) * OUTPUT_SIZE));
+
+        updateAccumulator(key);
+        forward(*entry);
+
+        return *entry;
+    }
+
+    void forward(int8_t* entry)  {
+        int16_t out[OUTPUT_SIZE];
+
+        memset(&out, 0, sizeof(int8_t) * OUTPUT_SIZE);
+
+        for (int i = 0; i < OUTPUT_SIZE; i++) {
+           for (int j = 0; j < HIDDEN_SIZE; j++) {
+              int index = i * HIDDEN_SIZE + j;
+
+              out[i] += relu(accumulator[WHITE][j]) * l1Weights[index];
+              out[i] += relu(accumulator[BLACK][j]) * l1Weights[index + OUTPUT_SIZE * HIDDEN_SIZE];
+           }
+
+           entry[i] = int8_t((out[i] + l1biases[i]) / 256);
+        }
+    }
+
+    int8_t relu(int8_t val) {
+        return std::max(val, int8_t(0));
+    }
+
+    void updateAccumulator(const OWNKey &newKey) {
+        for (Color c : {WHITE, BLACK}) {
+            for (PieceType pt = PAWN; pt <= QUEEN; ++pt) {
+                int diff = newKey.count(c, pt) - accInputKey.count(c, pt);
+
+                updateAccumulator(c, pt - 1, diff);
+                accInputKey.pieceCount[c][pt] += diff;
+            }
+        }
+    }
+
+    void updateAccumulator(Color c, int index, int difference) {
+        if (!difference)
+          return;
+
+        for (int i = 0; i < HIDDEN_SIZE; i++)
+            accumulator[c][i] += difference * l0Weights[index * HIDDEN_SIZE + i];
+    }
+};
+
 OutputWeightNet* own = new OutputWeightNet;
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
