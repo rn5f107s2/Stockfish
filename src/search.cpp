@@ -849,7 +849,7 @@ Value Search::Worker::search(
         while ((move = mp.next_move()) != Move::none())
             if (move != excludedMove && pos.legal(move))
             {
-                assert(pos.capture_stage(move));
+                //assert(pos.capture_stage(move));
 
                 // Prefetch the TT entry for the resulting position
                 prefetch(tt.first_entry(pos.key_after(move)));
@@ -857,7 +857,7 @@ Value Search::Worker::search(
                 ss->currentMove = move;
                 ss->continuationHistory =
                   &this
-                     ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][move.to_sq()];
+                     ->continuationHistory[ss->inCheck][pos.capture_stage(move)][pos.moved_piece(move)][move.to_sq()];
 
                 thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
                 pos.do_move(move, st);
