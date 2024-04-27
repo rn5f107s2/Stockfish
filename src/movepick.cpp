@@ -169,12 +169,7 @@ void MovePicker::score() {
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
 
-        protectedByUs = pos.attacks_by<PAWN  , true>(us)
-                      | pos.attacks_by<KNIGHT, true>(us)
-                      | pos.attacks_by<BISHOP, true>(us)
-                      | pos.attacks_by<ROOK  , true>(us)
-                      | pos.attacks_by<QUEEN , true>(us)
-                      | pos.attacks_by<KING  , true>(us);
+        protectedByUs = pos.protected_by(us);
     }
 
     for (auto& m : *this)

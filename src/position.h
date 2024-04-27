@@ -123,8 +123,9 @@ class Position {
     Bitboard attackers_to(Square s) const;
     Bitboard attackers_to(Square s, Bitboard occupied) const;
     void     update_slider_blockers(Color c) const;
-    template<PieceType Pt, bool Protected = false>
+    template<PieceType Pt>
     Bitboard attacks_by(Color c) const;
+    Bitboard protected_by(Color c) const;
 
     // Properties of moves
     bool  legal(Move m) const;
@@ -262,7 +263,7 @@ inline Square Position::castling_rook_square(CastlingRights cr) const {
 
 inline Bitboard Position::attackers_to(Square s) const { return attackers_to(s, pieces()); }
 
-template<PieceType Pt, bool Protected>
+template<PieceType Pt>
 inline Bitboard Position::attacks_by(Color c) const {
 
     if constexpr (Pt == PAWN)
@@ -273,24 +274,32 @@ inline Bitboard Position::attacks_by(Color c) const {
         Bitboard threats   = 0;
         Bitboard attackers = pieces(c, Pt);
 
-        [[maybe_unused]] Bitboard protectedOnce = 0;
-
-        while (attackers) {
-            Bitboard threatsThis = attacks_bb<Pt>(pop_lsb(attackers), pieces());
-
-            if constexpr (!Protected) {
-                threats |= threatsThis;
-                continue;
-            }
-
-            // This is necessary for non pawn pieces as they move to the squares they attack, meaning any piece always defends 
-            // the square its going to move to, meaning only pieces moving to squares atttacked twice are moving to protecetd squares
-            threats       |= threatsThis & protectedOnce;
-            protectedOnce |= threatsThis;
-        }
+        while (attackers)
+            threats |= attacks_bb<Pt>(pop_lsb(attackers), pieces());
 
         return threats;
     }
+}
+
+inline Bitboard Position::protected_by(Color c) const {
+    Bitboard protedctedSquares = 0;
+    Bitboard protectedOnce     = 0;
+
+    protedctedSquares |= c == WHITE ? pawn_attacks_bb<WHITE>(pieces(WHITE, PAWN))
+                                    : pawn_attacks_bb<BLACK>(pieces(BLACK, PAWN));
+
+    for (PieceType pt = KNIGHT; pt <= KING; ++pt) {
+        Bitboard attackers = pieces(c, pt);
+
+        while (attackers) {
+            Bitboard threatsThis = attacks_bb(pt, pop_lsb(attackers), pieces());
+
+            protedctedSquares |= threatsThis & protectedOnce;
+            protectedOnce     |= threatsThis;
+        }
+    }
+
+    return protedctedSquares;
 }
 
 inline Bitboard Position::checkers() const { return st->checkersBB; }
