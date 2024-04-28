@@ -1082,7 +1082,7 @@ moves_loop:  // When in check, search starts here
 
                 else if (   ttValue <= alpha
                          && tte->bound() == BOUND_LOWER
-                         && value > beta
+                         && value > ttValue
                          && ss->currentMove)
                 {
                     mp.setTTM(ss->currentMove);
