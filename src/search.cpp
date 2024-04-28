@@ -1048,7 +1048,7 @@ moves_loop:  // When in check, search starts here
             // Generally, higher singularBeta (i.e closer to ttValue) and lower extension
             // margins scale well.
 
-            if (!rootNode && move == ttMove && !excludedMove
+            if (!rootNode && move == ttMove && !excludedMove && moveCount == 1
                 && depth >= 4 - (thisThread->completedDepth > 38) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
@@ -1057,6 +1057,8 @@ moves_loop:  // When in check, search starts here
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
+                ss->currentMove = Move::none();
+
                 value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
@@ -1091,6 +1093,20 @@ moves_loop:  // When in check, search starts here
                 // If the ttMove is assumed to fail high over current beta (~7 Elo)
                 else if (ttValue >= beta)
                     extension = -3;
+
+                else if (   ttValue <= alpha - 50
+                         && tte->bound() == BOUND_LOWER
+                         && value >= beta
+                         && ss->currentMove)
+                {
+                    mp.setTTM(ss->currentMove);
+
+                    move = ss->currentMove;
+
+                    capture    = pos.capture_stage(move);
+                    givesCheck = pos.gives_check(move);
+                    movedPiece = pos.moved_piece(move);
+                }
 
                 // If we are on a cutNode but the ttMove is not assumed to fail high over current beta (~1 Elo)
                 else if (cutNode)
