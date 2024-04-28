@@ -1086,6 +1086,7 @@ moves_loop:  // When in check, search starts here
                          && ss->currentMove)
                 {
                     mp.setTTM(ss->currentMove);
+                    mp.setPrioMove(ttMove);
 
                     move = ss->currentMove;
 

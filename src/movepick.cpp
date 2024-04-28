@@ -33,6 +33,7 @@ namespace {
 enum Stages {
     // generate main search moves
     MAIN_TT,
+    MAIN_PRIO,
     CAPTURE_INIT,
     GOOD_CAPTURE,
     REFUTATION,
@@ -43,6 +44,7 @@ enum Stages {
 
     // generate evasion moves
     EVASION_TT,
+    EVASION_PRIO,
     EVASION_INIT,
     EVASION,
 
@@ -228,7 +230,7 @@ Move MovePicker::select(Pred filter) {
         if constexpr (T == Best)
             std::swap(*cur, *std::max_element(cur, endMoves));
 
-        if (*cur != ttMove && filter())
+        if (*cur != ttMove && *cur != priorityMove && filter())
             return *cur++;
 
         cur++;
@@ -253,6 +255,16 @@ top:
     case PROBCUT_TT :
         ++stage;
         return ttMove;
+
+    case MAIN_PRIO    :
+    case EVASION_PRIO :
+
+        ++stage;
+
+        if (priorityMove != Move::none())
+            return priorityMove;
+
+    goto top;       
 
     case CAPTURE_INIT :
     case PROBCUT_INIT :
@@ -385,6 +397,10 @@ top:
 
 void MovePicker::setTTM(Move newTTM) {
     ttMove = newTTM;
+}
+
+void MovePicker::setPrioMove(Move prioMove) {
+    priorityMove = prioMove;
 }
 
 }  // namespace Stockfish

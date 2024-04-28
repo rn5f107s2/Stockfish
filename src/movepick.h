@@ -176,6 +176,7 @@ class MovePicker {
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
     Move next_move(bool skipQuiets = false);
     void setTTM(Move newTTM);
+    void setPrioMove(Move prioMove);
 
    private:
     template<PickType T, typename Pred>
@@ -190,7 +191,7 @@ class MovePicker {
     const CapturePieceToHistory* captureHistory;
     const PieceToHistory**       continuationHistory;
     const PawnHistory*           pawnHistory;
-    Move                         ttMove;
+    Move                         ttMove, priorityMove = Move::none();
     ExtMove refutations[3], *cur, *endMoves, *endBadCaptures, *beginBadQuiets, *endBadQuiets;
     int     stage;
     int     threshold;
