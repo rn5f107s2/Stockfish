@@ -383,4 +383,8 @@ top:
     return Move::none();  // Silence warning
 }
 
+void MovePicker::setTTM(Move newTTM) {
+    ttMove = newTTM;
+}
+
 }  // namespace Stockfish
