@@ -1086,8 +1086,9 @@ moves_loop:  // When in check, search starts here
                          && ss->currentMove)
                 {
                     mp.setTTM(ss->currentMove);
-
-                    move = ss->currentMove;
+                    
+                    ttMove = ss->currentMove;
+                    move   = ss->currentMove;
 
                     capture    = pos.capture_stage(move);
                     givesCheck = pos.gives_check(move);
