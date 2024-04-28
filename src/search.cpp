@@ -1083,12 +1083,12 @@ moves_loop:  // When in check, search starts here
                 else if (   ttValue <= alpha
                          && tte->bound() == BOUND_LOWER
                          && value > beta
-                         && ss->currentMove)
+                         && ss->currentMove
+                         && depth < 14)
                 {
                     mp.setTTM(ss->currentMove);
                     
-                    ttMove = ss->currentMove;
-                    move   = ss->currentMove;
+                    move = ss->currentMove;
 
                     capture    = pos.capture_stage(move);
                     givesCheck = pos.gives_check(move);
