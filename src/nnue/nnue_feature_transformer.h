@@ -443,14 +443,15 @@ class FeatureTransformer {
 
         for (int i = N - 1; i >= 0; --i)
         {
+            FeatureSet::VastTable from = {{0}}, to = {{0}};
+
             (states_to_update[i]->*accPtr).computed[Perspective]     = !psqtOnly;
             (states_to_update[i]->*accPtr).computedPSQT[Perspective] = true;
 
             const StateInfo* end_state = i == 0 ? computed_st : states_to_update[i - 1];
 
             for (StateInfo* st2 = states_to_update[i]; st2 != end_state; st2 = st2->previous)
-                FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece, removed[i],
-                                                                added[i]);
+                FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece, removed[i], added[i], from, to);
         }
 
         StateInfo* st = computed_st;

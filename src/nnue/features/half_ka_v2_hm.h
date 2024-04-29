@@ -121,6 +121,7 @@ class HalfKAv2_hm {
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
     using IndexList                                = ValueList<IndexType, MaxActiveDimensions>;
+    using VastTable                                = std::array<std::array<int, SQUARE_NB>, PIECE_NB>;
 
     // Index of a feature for a given king position and another piece on some square
     template<Color Perspective>
@@ -133,7 +134,7 @@ class HalfKAv2_hm {
     // Get a list of indices for recently changed features
     template<Color Perspective>
     static void
-    append_changed_indices(Square ksq, const DirtyPiece& dp, IndexList& removed, IndexList& added);
+    append_changed_indices(Square ksq, const DirtyPiece& dp, IndexList& removed, IndexList& added, VastTable& from, VastTable& to);
 
     // Returns the cost of updating one perspective, the most costly one.
     // Assumes no refresh needed.

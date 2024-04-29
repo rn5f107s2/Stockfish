@@ -57,13 +57,42 @@ template<Color Perspective>
 void HalfKAv2_hm::append_changed_indices(Square            ksq,
                                          const DirtyPiece& dp,
                                          IndexList&        removed,
-                                         IndexList&        added) {
+                                         IndexList&        added,
+                                         VastTable&        from,
+                                         VastTable&        to) {
     for (int i = 0; i < dp.dirty_num; ++i)
     {
-        if (dp.from[i] != SQ_NONE)
-            removed.push_back(make_index<Perspective>(dp.from[i], dp.piece[i], ksq));
-        if (dp.to[i] != SQ_NONE)
-            added.push_back(make_index<Perspective>(dp.to[i], dp.piece[i], ksq));
+        if (dp.from[i] != SQ_NONE) {
+            if (to[dp.piece[i]][dp.from[i]]) 
+            {
+                int* entry = &to[dp.piece[i]][dp.from[i]];
+
+                added.replace((*entry) - 1);
+                *entry = 0;
+            }
+            else 
+            {
+                from[dp.piece[i]][dp.from[i]] = removed.size() + 1;
+                removed.push_back(make_index<Perspective>(dp.from[i], dp.piece[i], ksq));
+            }
+        }
+
+        if (dp.to[i] != SQ_NONE) {
+            if (from[dp.piece[i]][dp.to[i]] && false) 
+            {
+                int* entry = &from[dp.piece[i]][dp.to[i]];
+
+                std::cout << "Popped one size: " << removed.size();
+                removed.replace((*entry) - 1);
+                std::cout << "Popped one size: " << removed.size();
+                *entry = 0;
+            }
+            else 
+            {
+                to[dp.piece[i]][dp.to[i]] = added.size() + 1;
+                added.push_back(make_index<Perspective>(dp.to[i], dp.piece[i], ksq));
+            }
+        }
     }
 }
 
@@ -71,11 +100,15 @@ void HalfKAv2_hm::append_changed_indices(Square            ksq,
 template void HalfKAv2_hm::append_changed_indices<WHITE>(Square            ksq,
                                                          const DirtyPiece& dp,
                                                          IndexList&        removed,
-                                                         IndexList&        added);
+                                                         IndexList&        added,
+                                                         VastTable&        from,
+                                                         VastTable&        to);
 template void HalfKAv2_hm::append_changed_indices<BLACK>(Square            ksq,
                                                          const DirtyPiece& dp,
                                                          IndexList&        removed,
-                                                         IndexList&        added);
+                                                         IndexList&        added,
+                                                         VastTable&        from,
+                                                         VastTable&        to);
 
 int HalfKAv2_hm::update_cost(const StateInfo* st) { return st->dirtyPiece.dirty_num; }
 
