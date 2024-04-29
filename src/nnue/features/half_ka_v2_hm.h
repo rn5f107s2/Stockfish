@@ -134,7 +134,7 @@ class HalfKAv2_hm {
     // Get a list of indices for recently changed features
     template<Color Perspective>
     static void
-    append_changed_indices(Square ksq, const DirtyPiece& dp, IndexList& removed, IndexList& added, VastTable& from, VastTable& to);
+    append_changed_indices(Square ksq, const DirtyPiece& dp, IndexList& removed, IndexList& added, VastTable& from, VastTable& to, int**);
 
     // Returns the cost of updating one perspective, the most costly one.
     // Assumes no refresh needed.

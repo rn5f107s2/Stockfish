@@ -440,18 +440,18 @@ class FeatureTransformer {
         // feature set's update cost calculation to be correct and never allow
         // updates with more added/removed features than MaxActiveDimensions.
         FeatureSet::IndexList removed[N], added[N];
+        FeatureSet::VastTable from[N] = {{{0}}}, to[N] = {{{0}}};
+        int* prevEntrys[2];
 
         for (int i = N - 1; i >= 0; --i)
         {
-            FeatureSet::VastTable from = {{0}}, to = {{0}};
-
             (states_to_update[i]->*accPtr).computed[Perspective]     = !psqtOnly;
             (states_to_update[i]->*accPtr).computedPSQT[Perspective] = true;
 
             const StateInfo* end_state = i == 0 ? computed_st : states_to_update[i - 1];
 
             for (StateInfo* st2 = states_to_update[i]; st2 != end_state; st2 = st2->previous)
-                FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece, removed[i], added[i], from, to);
+                FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece, removed[i], added[i], from[i], to[i], prevEntrys);
         }
 
         StateInfo* st = computed_st;
