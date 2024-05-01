@@ -143,7 +143,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
 // for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 // captures with a good history. Quiets moves are ordered using the history tables.
 template<GenType Type>
-void MovePicker::score() {
+void MovePicker::score(int pawnBonus) {
 
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -204,6 +204,9 @@ void MovePicker::score() {
                           : pt != PAWN ? bool(to & threatenedByPawn) * 14950
                                        : 0)
                        : 0;
+
+            if (pt == PAWN)
+                m.value += pawnBonus;
         }
 
         else  // Type == EVASIONS
@@ -239,7 +242,7 @@ Move MovePicker::select(Pred filter) {
 // Most important method of the MovePicker class. It
 // returns a new pseudo-legal move every time it is called until there are no more
 // moves left, picking the move with the highest score from a list of generated moves.
-Move MovePicker::next_move(bool skipQuiets) {
+Move MovePicker::next_move(bool skipQuiets, int pawnBonus) {
 
     auto quiet_threshold = [](Depth d) { return -3560 * d; };
 
@@ -298,7 +301,7 @@ top:
             cur      = endBadCaptures;
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
-            score<QUIETS>();
+            score<QUIETS>(pawnBonus);
             partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
         }
 

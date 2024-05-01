@@ -909,10 +909,13 @@ moves_loop:  // When in check, search starts here
 
     value            = bestValue;
     moveCountPruning = false;
+    
+    bool pawnBonusGZ = depth == 1 && ss->staticEval < alpha && (((ss->staticEval * 204) / (178 - pos.rule50_count())) >= alpha);
+    int  pawnBonus   = pawnBonusGZ ? (alpha - ss->staticEval) * 333 : 0;
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
-    while ((move = mp.next_move(moveCountPruning)) != Move::none())
+    while ((move = mp.next_move(moveCountPruning, pawnBonus)) != Move::none())
     {
         assert(move.is_ok());
 
