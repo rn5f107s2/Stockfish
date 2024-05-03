@@ -1099,6 +1099,17 @@ moves_loop:  // When in check, search starts here
                     capture    = pos.capture_stage(move);
                     givesCheck = pos.gives_check(move);
                     movedPiece = pos.moved_piece(move);
+
+                    singularBeta = value - (65 + 59 * (ss->ttPv && !PvNode)) * depth / 63;
+
+                    if (singularBeta > ttValue) {
+                        ss->excludedMove = move;
+
+                        value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+
+                        if (value < singularBeta)
+                            extension = 1;
+                    }
                 }
 
                 // If we are on a cutNode but the ttMove is not assumed to fail high over current beta (~1 Elo)
