@@ -854,7 +854,7 @@ Value Search::Worker::search(
         {
             ss->currentMove = Move::none();
 
-            qScore = qsearch<NonPV>(pos, ss, probCutBeta - 1, probCutBeta, 1, searchedMoves, triedCount);
+            qScore = qsearch<NonPV>(pos, ss, probCutBeta - 1, probCutBeta, -1, searchedMoves, triedCount);
 
             if (qScore < probCutBeta)
                 break;
@@ -1611,7 +1611,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         // Step 7. Make and search the move
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
-        value = -qsearch<nodeType>(pos, ss + 1, -beta, -alpha, depth - 1);
+        value = -qsearch<nodeType>(pos, ss + 1, -beta, -alpha, depth - 1 + bool(exclMoves) * 2);
         pos.undo_move(move);
 
         assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
