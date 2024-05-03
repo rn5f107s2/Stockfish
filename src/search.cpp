@@ -846,41 +846,51 @@ Value Search::Worker::search(
 
         MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &thisThread->captureHistory);
 
-        while ((move = mp.next_move()) != Move::none())
-            if (move != excludedMove && pos.legal(move))
+        Value qScore;
+        Move searchedMoves[32];
+        int triedCount = 0;
+
+        while (triedCount < 32) 
+        {
+            ss->currentMove = Move::none();
+
+            qScore = qsearch<NonPV>(pos, ss, probCutBeta - 1, probCutBeta, 1, searchedMoves, triedCount);
+
+            if (qScore < probCutBeta)
+                break;
+
+            move = ss->currentMove;
+
+            searchedMoves[triedCount++] = move;
+
+            if (move == excludedMove)
+                continue;
+
+            // Prefetch the TT entry for the resulting position
+            prefetch(tt.first_entry(pos.key_after(move)));
+
+            ss->continuationHistory =
+                &this
+                    ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][move.to_sq()];
+
+            thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
+            pos.do_move(move, st);
+
+            // If the qsearch held, perform the regular search
+            if (qScore >= probCutBeta)
+                value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4, !cutNode);
+
+            pos.undo_move(move);
+
+            if (value >= probCutBeta)
             {
-                assert(pos.capture_stage(move));
-
-                // Prefetch the TT entry for the resulting position
-                prefetch(tt.first_entry(pos.key_after(move)));
-
-                ss->currentMove = move;
-                ss->continuationHistory =
-                  &this
-                     ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][move.to_sq()];
-
-                thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
-                pos.do_move(move, st);
-
-                // Perform a preliminary qsearch to verify that the move holds
-                value = -qsearch<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1);
-
-                // If the qsearch held, perform the regular search
-                if (value >= probCutBeta)
-                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4,
-                                           !cutNode);
-
-                pos.undo_move(move);
-
-                if (value >= probCutBeta)
-                {
-                    // Save ProbCut data into transposition table
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3,
-                              move, unadjustedStaticEval, tt.generation());
-                    return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
-                                                                     : value;
-                }
+                // Save ProbCut data into transposition table
+                tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, unadjustedStaticEval, tt.generation());
+                return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
+                                                                 : value;
             }
+
+        }
 
         Eval::NNUE::hint_common_parent_position(pos, networks, refreshTable);
     }
@@ -1380,7 +1390,7 @@ moves_loop:  // When in check, search starts here
 // function with zero depth, or recursively with further decreasing depth per call.
 // (~155 Elo)
 template<NodeType nodeType>
-Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
+Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, Move* exclMoves, int count) {
 
     static_assert(nodeType != Root);
     constexpr bool PvNode = nodeType == PV;
@@ -1447,6 +1457,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && tte->depth() >= ttDepth
+        && !exclMoves
         && ttValue != VALUE_NONE  // Only in case of TT access race or if !ttHit
         && (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
         return ttValue;
@@ -1483,7 +1494,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         }
 
         // Stand pat. Return immediately if static value is at least beta
-        if (bestValue >= beta)
+        if (bestValue >= beta && !exclMoves)
         {
             if (!ss->ttHit)
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER, DEPTH_NONE,
@@ -1492,8 +1503,11 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             return bestValue;
         }
 
-        if (bestValue > alpha)
+        if (bestValue > alpha && !exclMoves)
             alpha = bestValue;
+
+        if (exclMoves)
+            bestValue = alpha;
 
         futilityBase = ss->staticEval + 250;
     }
@@ -1520,6 +1534,10 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         // Check for legality
         if (!pos.legal(move))
             continue;
+
+        for (int i = 0; i < count; i++)
+            if (move == exclMoves[i])
+                continue;
 
         givesCheck = pos.gives_check(move);
         capture    = pos.capture_stage(move);
