@@ -768,12 +768,44 @@ Value Search::Worker::search(
 
     // Step 8. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
-    if (!ss->ttPv && depth < 12
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, opponentWorsening)
-               - (ss - 1)->statScore / 286
-             >= beta
-        && eval >= beta && eval < VALUE_TB_WIN_IN_MAX_PLY && (!ttMove || ttCapture))
-        return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+    if (   !ss->ttPv && depth < 12 
+        && eval >= beta 
+        && eval < VALUE_TB_WIN_IN_MAX_PLY 
+        && (!ttMove || ttCapture))
+    {
+        Value futilityMargin = beta + futility_margin(depth, cutNode && !ss->ttHit, improving, opponentWorsening) + (ss - 1)->statScore / 314;
+
+        if (eval >= futilityMargin)
+            return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+
+        if (ttCapture) 
+        {
+            if (   !excludedMove
+                && (tte->bound() != BOUND_UPPER)
+                && pos.see_ge(ttMove, ss->staticEval - futilityMargin + 150)
+                && pos.legal(ttMove)
+                && pos.pseudo_legal(ttMove)) 
+            {
+                Value window = futilityMargin + 150;
+
+                ss->currentMove = ttMove;
+                ss->continuationHistory =
+                  &this
+                     ->continuationHistory[ss->inCheck][true][pos.moved_piece(ttMove)][ttMove.to_sq()];
+
+                pos.do_move(ttMove, st);
+
+                value = -qsearch<NonPV>(pos, ss+1, -window, -window + 1);
+
+                pos.undo_move(ttMove);
+
+                dbg_hit_on(value >= window);
+
+                if (value >= window)
+                    return eval;
+            }
+        }
+    }
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 18001
