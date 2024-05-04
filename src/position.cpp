@@ -1056,6 +1056,9 @@ bool Position::see_ge(Move m, int threshold) const {
     Bitboard stmAttackers, bb;
     int      res = 1;
 
+    if (from & blockers_for_king(~sideToMove))
+        attackers &= (pieces(sideToMove) | pieces(~sideToMove, KING));
+
     while (true)
     {
         stm = ~stm;
