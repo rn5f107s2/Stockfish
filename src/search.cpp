@@ -1100,6 +1100,11 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 3807)
                 extension = 1;
+
+            else if (   move == ttMove 
+                     && tte->depth() == depth 
+                     && givesCheck)
+                extension = 1;
         }
 
         // Add extension to new depth
