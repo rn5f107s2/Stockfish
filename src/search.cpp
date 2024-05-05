@@ -798,6 +798,13 @@ Value Search::Worker::search(
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
+            if (nullValue > ss->staticEval) {
+                auto bonus = std::clamp(int(nullValue - ss->staticEval) * depth / 8,
+                                -CORRECTION_HISTORY_LIMIT / 4, CORRECTION_HISTORY_LIMIT / 4);
+
+                thisThread->correctionHistory[us][pawn_structure_index<Correction>(pos)] << bonus;
+            }
+
             if (thisThread->nmpMinPly || depth < 16)
                 return nullValue;
 
