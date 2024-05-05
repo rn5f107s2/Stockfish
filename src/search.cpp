@@ -798,6 +798,12 @@ Value Search::Worker::search(
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
+            int i = 0;
+
+            if (   (ss-1)->currentMove == (ss-1)->killers[  i]
+                || (ss-1)->currentMove == (ss-1)->killers[++i])
+                (ss-1)->killers[i] = Move::none();
+
             if (thisThread->nmpMinPly || depth < 16)
                 return nullValue;
 
