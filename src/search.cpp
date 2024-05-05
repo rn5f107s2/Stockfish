@@ -803,7 +803,7 @@ Value Search::Worker::search(
                 && !(ss-1)->inCheck 
                 && !priorCapture)
             {   
-                int malus = std::clamp(-int((ss-1)->staticEval + nullValue) * 2, -900, 0);
+                int malus = std::clamp(-int((ss-1)->staticEval + nullValue) * 4, -1800, 0);
                 thisThread->mainHistory[~us][(ss-1)->currentMove.from_to()] << malus;
             }
 
