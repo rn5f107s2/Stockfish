@@ -798,6 +798,15 @@ Value Search::Worker::search(
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
+
+            if (    (ss-1)->currentMove != Move::none() 
+                && !(ss-1)->inCheck 
+                && !priorCapture)
+            {   
+                int malus = std::clamp(-int((ss-1)->staticEval + nullValue) * 4, -1800, 0);
+                thisThread->mainHistory[~us][(ss-1)->currentMove.from_to()] << malus;
+            }
+
             if (thisThread->nmpMinPly || depth < 16)
                 return nullValue;
 
@@ -1203,12 +1212,20 @@ moves_loop:  // When in check, search starts here
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
         // otherwise let the parent node fail low with value <= alpha and try another move.
-        if (PvNode && (moveCount == 1 || value > alpha))
+        if (PvNode && (moveCount == 1 || (value > alpha && ttMove)))
         {
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
 
             value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+        }
+
+        if (PvNode && !ttMove && value > alpha)
+        {
+            (ss + 1)->pv    = pv;
+            (ss + 1)->pv[0] = Move::none();
+
+            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth + 2, false);
         }
 
         // Step 19. Undo move
