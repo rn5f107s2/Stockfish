@@ -915,6 +915,7 @@ moves_loop:  // When in check, search starts here
     if (   !PvNode
         && tte->depth() > depth
         && ttValue <= alpha
+        && depth < 12
         && (tte->bound() & BOUND_LOWER))
         bestValue = ttValue;
 
