@@ -54,6 +54,10 @@ void TTEntry::save(
     }
 }
 
+void TTEntry::resetTTM() {
+    move16 = Move::none();
+}
+
 
 uint8_t TTEntry::relative_age(const uint8_t generation8) const {
     // Due to our packed storage format for generation and its cyclic

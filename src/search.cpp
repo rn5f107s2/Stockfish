@@ -1290,6 +1290,13 @@ moves_loop:  // When in check, search starts here
                     assert(depth > 0);
                     alpha = value;  // Update alpha! Always alpha < beta
                 }
+            } 
+            else if (move == ttMove) 
+            {
+                Depth maxReplacedDepth = tte->depth() + 2 * tte->is_pv() + 3;
+
+                if (depth > maxReplacedDepth)
+                    tte->resetTTM();
             }
         }
 
