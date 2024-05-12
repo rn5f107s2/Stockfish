@@ -912,6 +912,12 @@ moves_loop:  // When in check, search starts here
     value            = bestValue;
     moveCountPruning = false;
 
+    if (   !PvNode
+        && tte->depth() > depth
+        && ttValue <= alpha
+        && (tte->bound() & BOUND_LOWER))
+        bestValue = ttValue;
+
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move(moveCountPruning)) != Move::none())
