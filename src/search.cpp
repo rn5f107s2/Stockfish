@@ -434,7 +434,10 @@ void Search::Worker::iterative_deepening() {
         // Do we have time for the next iteration? Can we stop searching now?
         if (limits.use_time_management() && !threads.stop && !mainThread->stopOnPonderhit)
         {
-            int nodesEffort = rootMoves[0].effort * 100 / std::max(size_t(1), size_t(nodes));
+            for (RootMove &rm : rootMoves)
+                rm.nodesEffort = rm.effort * 100 / std::max(size_t(1), size_t(nodes));
+
+            int bestMoveNodesEffort = rootMoves[0].effort * 100 / std::max(size_t(1), size_t(nodes));
 
             double fallingEval = (1067 + 223 * (mainThread->bestPreviousAverageScore - bestValue)
                                   + 97 * (mainThread->iterValue[iterIdx] - bestValue))
@@ -457,7 +460,7 @@ void Search::Worker::iterative_deepening() {
 
             auto elapsedTime = elapsed();
 
-            if (completedDepth >= 10 && nodesEffort >= 97 && elapsedTime > totalTime * 0.739
+            if (completedDepth >= 10 && bestMoveNodesEffort >= 97 && elapsedTime > totalTime * 0.739
                 && !mainThread->ponder)
                 threads.stop = true;
 
@@ -906,8 +909,21 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
+    int* effortTable = nullptr;
+    int ar[SQUARE_NB * SQUARE_NB];
+
+    if constexpr (rootNode)
+    {
+        memset(ar, 0, SQUARE_NB * SQUARE_NB * sizeof(int));
+
+        for (RootMove &rm : thisThread->rootMoves)
+            ar[rm.pv[0].from_to()] = rm.nodesEffort;
+
+        effortTable = ar;
+    }
+
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, countermove, ss->killers);
+                  contHist, &thisThread->pawnHistory, countermove, ss->killers, effortTable);
 
     value            = bestValue;
     moveCountPruning = false;

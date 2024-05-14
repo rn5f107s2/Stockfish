@@ -92,7 +92,8 @@ MovePicker::MovePicker(const Position&              p,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
                        Move                         cm,
-                       const Move*                  killers) :
+                       const Move*                  killers,
+                       const int*                   et) :
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
@@ -100,7 +101,8 @@ MovePicker::MovePicker(const Position&              p,
     pawnHistory(ph),
     ttMove(ttm),
     refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
-    depth(d) {
+    depth(d),
+    effortTable(et) {
     assert(d > 0);
 
     stage = (pos.checkers() ? EVASION_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
@@ -204,6 +206,9 @@ void MovePicker::score() {
                           : pt != PAWN ? bool(to & threatenedByPawn) * 14950
                                        : 0)
                        : 0;
+
+            if (effortTable)
+                m.value += effortTable[m.from_to()] * depth * depth * depth;
         }
 
         else  // Type == EVASIONS
