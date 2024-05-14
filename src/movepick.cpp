@@ -92,7 +92,8 @@ MovePicker::MovePicker(const Position&              p,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
                        Move                         cm,
-                       const Move*                  killers) :
+                       const Move*                  killers,
+                       const int*                   et) :
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
@@ -100,7 +101,8 @@ MovePicker::MovePicker(const Position&              p,
     pawnHistory(ph),
     ttMove(ttm),
     refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
-    depth(d) {
+    depth(d),
+    effortTable(et) {
     assert(d > 0);
 
     stage = (pos.checkers() ? EVASION_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
@@ -145,11 +147,11 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
 template<GenType Type>
 void MovePicker::score() {
 
-    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
+    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS || Type == LEGAL, "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
       threatenedPieces;
-    if constexpr (Type == QUIETS)
+    if constexpr (Type == QUIETS || Type == LEGAL)
     {
         Color us = pos.side_to_move();
 
@@ -163,6 +165,26 @@ void MovePicker::score() {
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
     }
+
+    const auto quietNonHistoryAdjustments = [&](ExtMove &m, Square from, Square to, PieceType pt) {
+        // bonus for checks
+        m.value += bool(pos.check_squares(pt) & to) * 16384;
+
+        // bonus for escaping from capture
+        m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)  ? 51700
+                                           :  pt == ROOK  && !(to & threatenedByMinor) ? 25600
+                                           :                 !(to & threatenedByPawn)  ? 14450
+                                                                                       : 0)
+                                           : 0;
+
+        // malus for putting piece en prise
+        m.value -= !(threatenedPieces & from) ? (pt == QUEEN ? bool(to & threatenedByRook)  * 48150
+                                                             + bool(to & threatenedByMinor) * 10650
+                                              :  pt == ROOK  ? bool(to & threatenedByMinor) * 24335
+                                              :  pt != PAWN  ? bool(to & threatenedByPawn)  * 14950
+                                                             : 0)
+                                              : 0;
+    };
 
     for (auto& m : *this)
         if constexpr (Type == CAPTURES)
@@ -186,27 +208,10 @@ void MovePicker::score() {
             m.value += (*continuationHistory[3])[pc][to];
             m.value += (*continuationHistory[5])[pc][to];
 
-            // bonus for checks
-            m.value += bool(pos.check_squares(pt) & to) * 16384;
-
-            // bonus for escaping from capture
-            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51700
-                                                  : pt == ROOK && !(to & threatenedByMinor) ? 25600
-                                                  : !(to & threatenedByPawn)                ? 14450
-                                                                                            : 0)
-                                               : 0;
-
-            // malus for putting piece en prise
-            m.value -= !(threatenedPieces & from)
-                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 48150
-                                          + bool(to & threatenedByMinor) * 10650
-                          : pt == ROOK ? bool(to & threatenedByMinor) * 24335
-                          : pt != PAWN ? bool(to & threatenedByPawn) * 14950
-                                       : 0)
-                       : 0;
+            quietNonHistoryAdjustments(m, from, to, pt);
         }
 
-        else  // Type == EVASIONS
+        else if constexpr(Type == EVASIONS)
         {
             if (pos.capture_stage(m))
                 m.value =
@@ -215,6 +220,44 @@ void MovePicker::score() {
                 m.value = (*mainHistory)[pos.side_to_move()][m.from_to()]
                         + (*continuationHistory[0])[pos.moved_piece(m)][m.to_sq()]
                         + (*pawnHistory)[pawn_structure_index(pos)][pos.moved_piece(m)][m.to_sq()];
+        }
+
+        else // Type == LEGAL
+        {
+            Piece     pc   = pos.moved_piece(m);
+            PieceType pt   = type_of(pc);
+            Square    to   = m.to_sq();
+
+            int effortScore = (effortTable[m.from_to()] * 655);
+
+            const auto effortScale = []() {
+                // Im aware that doubles shouldnt be used, this is just not trivial to write without doubles
+                // incase this passes STC I will look for something without floating points
+                double exponent = (depth - 13) * -0.2;
+                return 90 / (1 + std::exp(exponent));
+            };
+
+            if (!pos.capture_stage(m)) 
+            {
+                // histories
+                m.value  = 2 * (*mainHistory)[pos.side_to_move()][m.from_to()];
+                m.value += 2 * (*pawnHistory)[pawn_structure_index(pos)][pc][to];
+
+                quietNonHistoryAdjustments(m, m.from_sq(), to, pt);
+            } 
+            else 
+            {
+                Piece  captured = pos.piece_on(to);
+
+                m.value  = 7 * int(PieceValue[captured]);
+                m.value += (*captureHistory)[pc][to][type_of(captured)];
+
+                if (see(m, -cur->value / 18))
+                    m.value += 5000 * (13 - std::min(depth, 13));
+            }
+
+            m.value = std::clamp(m.value, -65536, 65536);
+            m.value = int(m.value * (1.0 - effortScale())) + effortScore * effortScale();
         }
 }
 
