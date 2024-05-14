@@ -84,6 +84,9 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     else
         adjustEval(32793, 9, 1067, 206);
 
+    if (!smallNet)
+        v = (v * 819) / 1024;
+
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
