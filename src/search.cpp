@@ -548,7 +548,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, extendAllMoves;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -911,7 +911,7 @@ moves_loop:  // When in check, search starts here
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
-    moveCountPruning = false;
+    moveCountPruning = extendAllMoves = false;
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -1059,7 +1059,7 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
-                    depth += ((!PvNode) && (depth < 14));
+                    extendAllMoves = ((!PvNode) && (depth < 14));
                 }
 
                 // Multi-cut pruning
@@ -1096,6 +1096,9 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4041)
                 extension = 1;
+            
+            else 
+                extension += extendAllMoves;
         }
 
         // Add extension to new depth
