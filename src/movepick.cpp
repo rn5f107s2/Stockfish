@@ -97,7 +97,7 @@ MovePicker::MovePicker(const Position&              p,
                        const PawnHistory*           ph,
                        Move                         cm,
                        const Move*                  killers,
-                       const int*                   et) :
+                       const bool                   r) :
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
@@ -106,10 +106,10 @@ MovePicker::MovePicker(const Position&              p,
     ttMove(ttm),
     refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
     depth(d),
-    effortTable(et) {
+    root(r) {
     assert(d > 0);
 
-    stage = (pos.checkers() ? EVASION_TT : et ? ROOT_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
+    stage = (pos.checkers() ? EVASION_TT : r ? ROOT_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
 }
 
 // Constructor for quiescence search
@@ -192,8 +192,6 @@ void MovePicker::score() {
             m.value += (*continuationHistory[3])[pc][to];
             m.value += (*continuationHistory[5])[pc][to];
 
-            quietNonHistoryAdjustments(m, from, to, pt);
-
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
@@ -213,7 +211,7 @@ void MovePicker::score() {
                                                 : 0;
         }
 
-        else // Type == EVASIONS
+        else  // Type == EVASIONS
         {
             if (pos.capture_stage(m))
                 m.value =
@@ -276,7 +274,7 @@ top:
     case GOOD_CAPTURE :
         if (select<Next>([&]() {
                 // Move losing capture to endBadCaptures to be tried later
-                return pos.see_ge(*cur, -cur->value / 18) ? !effortTable || (*cur != refutations[0] && *cur != refutations[1])
+                return pos.see_ge(*cur, -cur->value / 18) ? !root || (*cur != refutations[0] && *cur != refutations[1])
                                                           : (*endBadCaptures++ = *cur, false);
             }))
             return *(cur - 1);
@@ -293,7 +291,7 @@ top:
         [[fallthrough]];
 
     case REFUTATION :
-        if (!effortTable && select<Next>([&]() {
+        if (!root && select<Next>([&]() {
                 return *cur != Move::none() && !pos.capture_stage(*cur) && pos.pseudo_legal(*cur);
             }))
             return *(cur - 1);
@@ -333,7 +331,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([&]() { return !effortTable || (*cur != refutations[0] && *cur != refutations[1]); }))
+        if (select<Next>([&]() { return !root || (*cur != refutations[0] && *cur != refutations[1]); }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
@@ -399,6 +397,7 @@ top:
             return *(cur-1);
 
         stage = CAPTURE_INIT;
+        goto top;
     }
 
     assert(false);

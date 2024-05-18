@@ -907,21 +907,8 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
-    int* effortTable = nullptr;
-    int ar[SQUARE_NB * SQUARE_NB];
-
-    if constexpr (rootNode)
-    {
-        memset(ar, 0, SQUARE_NB * SQUARE_NB * sizeof(int));
-
-        for (RootMove &rm : thisThread->rootMoves)
-            ar[rm.pv[0].from_to()] = rm.nodesEffort;
-
-        effortTable = ar;
-    }
-
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, countermove, ss->killers, effortTable);
+                  contHist, &thisThread->pawnHistory, countermove, ss->killers, rootNode);
 
     value            = bestValue;
     moveCountPruning = false;
