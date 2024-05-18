@@ -432,10 +432,13 @@ void Search::Worker::iterative_deepening() {
             th->worker->bestMoveChanges = 0;
         }
 
+        for (RootMove &rm : rootMoves)
+            rm.effortPercent = rm.effort * 100 / std::max(size_t(1), size_t(nodes));
+
         // Do we have time for the next iteration? Can we stop searching now?
         if (limits.use_time_management() && !threads.stop && !mainThread->stopOnPonderhit)
         {
-            int nodesEffort = rootMoves[0].effort * 100 / std::max(size_t(1), size_t(nodes));
+            int nodesEffort = rootMoves[0].effortPercent;
 
             double fallingEval = (1067 + 223 * (mainThread->bestPreviousAverageScore - bestValue)
                                   + 97 * (mainThread->iterValue[iterIdx] - bestValue))
@@ -1019,6 +1022,12 @@ moves_loop:  // When in check, search starts here
                 if (!pos.see_ge(move, -27 * lmrDepth * lmrDepth))
                     continue;
             }
+        }
+
+        if constexpr (rootNode) 
+        {
+            RootMove &rm = *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+            extension = move != ttMove && completedDepth >= 10 && rm.effortPercent >= 33;
         }
 
         // Step 15. Extensions (~100 Elo)
