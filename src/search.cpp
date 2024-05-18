@@ -1269,7 +1269,7 @@ moves_loop:  // When in check, search starts here
 
             if (value > alpha)
             {
-                if constexpr (rootNode)
+                if (rootNode && bestMove)
                     update_refutations(pos, ss, *this, bestMove);
 
                 bestMove = move;

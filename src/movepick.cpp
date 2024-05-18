@@ -109,7 +109,7 @@ MovePicker::MovePicker(const Position&              p,
     root(r) {
     assert(d > 0);
 
-    stage = (pos.checkers() ? EVASION_TT : r ? ROOT_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
+    stage = (pos.checkers() ? EVASION_TT : (r ? ROOT_TT : MAIN_TT)) + !(ttm && pos.pseudo_legal(ttm));
 }
 
 // Constructor for quiescence search
