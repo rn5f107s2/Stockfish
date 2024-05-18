@@ -56,7 +56,13 @@ enum Stages {
     QCAPTURE_INIT,
     QCAPTURE,
     QCHECK_INIT,
-    QCHECK
+    QCHECK,
+
+    ROOT_TT,
+    INIT_ROOT_KILLERS,
+    ROOT_KILLERS,
+    ROOT_INIT,
+    ROOT
 };
 
 // Sort moves in descending order up to and including
@@ -105,7 +111,7 @@ MovePicker::MovePicker(const Position&              p,
     effortTable(et) {
     assert(d > 0);
 
-    stage = (pos.checkers() ? EVASION_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
+    stage = (pos.checkers() ? EVASION_TT : et ? ROOT_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
 }
 
 // Constructor for quiescence search
@@ -230,12 +236,10 @@ void MovePicker::score() {
 
             int effortScore = (effortTable[m.from_to()] * 655);
 
-            const auto effortScale = []() {
-                // Im aware that doubles shouldnt be used, this is just not trivial to write without doubles
-                // incase this passes STC I will look for something without floating points
-                double exponent = (depth - 13) * -0.2;
-                return 90 / (1 + std::exp(exponent));
-            };
+            // Im aware that doubles shouldnt be used, this is just not trivial to write without doubles
+            // incase this passes STC I will look for something without floating points
+            double exponent    = (depth - 13) * -0.2;
+            double effortScale =  0.9 / (1 + std::exp(exponent));
 
             if (!pos.capture_stage(m)) 
             {
@@ -252,12 +256,12 @@ void MovePicker::score() {
                 m.value  = 7 * int(PieceValue[captured]);
                 m.value += (*captureHistory)[pc][to][type_of(captured)];
 
-                if (see(m, -cur->value / 18))
+                if (pos.see_ge(m, -cur->value / 18))
                     m.value += 5000 * (13 - std::min(depth, 13));
             }
 
             m.value = std::clamp(m.value, -65536, 65536);
-            m.value = int(m.value * (1.0 - effortScale())) + effortScore * effortScale();
+            m.value = int(m.value * (1.0 - effortScale)) + effortScore * effortScale;
         }
 }
 
@@ -294,6 +298,7 @@ top:
     case EVASION_TT :
     case QSEARCH_TT :
     case PROBCUT_TT :
+    case ROOT_TT :
         ++stage;
         return ttMove;
 
@@ -420,6 +425,32 @@ top:
 
     case QCHECK :
         return select<Next>([]() { return true; });
+
+    case INIT_ROOT_KILLERS :
+        cur      = std::begin(refutations);
+        endMoves = &refutations[2];
+
+        ++stage;
+        [[fallthrough]];
+
+    case ROOT_KILLERS :
+
+        if (select<Next>([]() { return true; }))
+            return *(cur-1);
+
+        ++stage;
+        [[fallthrough]];
+
+    case ROOT_INIT :
+        cur      = moves;
+        endMoves = generate<LEGAL>(pos, cur);
+        score<LEGAL>();
+
+        ++stage;
+        [[fallthrough]];
+
+    case ROOT :
+        return select<Best>([&]() { return *cur != refutations[0] && *cur != refutations[1]; });
     }
 
     assert(false);

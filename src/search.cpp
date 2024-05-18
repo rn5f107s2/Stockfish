@@ -1285,6 +1285,9 @@ moves_loop:  // When in check, search starts here
 
             if (value > alpha)
             {
+                if constexpr (rootNode)
+                    update_refutations(pos, ss, *this, bestMove);
+
                 bestMove = move;
 
                 if (PvNode && !rootNode)  // Update pv even in fail-high case
@@ -1837,7 +1840,9 @@ void update_quiet_histories(
 void update_quiet_stats(
   const Position& pos, Stack* ss, Search::Worker& workerThread, Move move, int bonus) {
 
-    update_refutations(pos, ss, workerThread, move);
+    if (ss->ply)
+        update_refutations(pos, ss, workerThread, move);
+    
     update_quiet_histories(pos, ss, workerThread, move, bonus);
 }
 
