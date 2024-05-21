@@ -546,12 +546,12 @@ Value Search::Worker::search(
     TTEntry* tte;
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
-    Depth    extension, newDepth;
+    Depth    extension, newDepth, lastUpdatedDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
-    int      moveCount, captureCount, quietCount;
+    int      moveCount, captureCount, quietCount, futilityMoveCount;
 
     // Step 1. Initialize node
     Worker* thisThread = this;
@@ -924,6 +924,7 @@ moves_loop:  // When in check, search starts here
 
     value            = bestValue;
     moveCountPruning = false;
+    lastUpdatedDepth = MAX_PLY;
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -972,8 +973,14 @@ moves_loop:  // When in check, search starts here
         // Depth conditions are important for mate finding.
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
         {
+            if (depth != lastUpdatedDepth) 
+            {
+                futilityMoveCount = futility_move_count(improving, depth);
+                lastUpdatedDepth  = depth;
+            }
+
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-            moveCountPruning = moveCount >= futility_move_count(improving, depth);
+            moveCountPruning = moveCount >= futilityMoveCount;
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
