@@ -832,8 +832,8 @@ Value Search::Worker::search(
     // For PV nodes without a ttMove, we decrease depth by 3.
     if (PvNode && !ttMove)
         depth -= 3;
-
-    if (!PvNode && ss->ttHit && (tte->bound() & BOUND_UPPER) && ttValue > alpha + 5 * depth)
+ 
+    if (cutNode && ss->ttHit && (tte->bound() & BOUND_UPPER) && ttValue >= beta + 5 * depth)
         depth--;
 
     // Use qsearch if depth <= 0.
