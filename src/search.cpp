@@ -836,12 +836,6 @@ Value Search::Worker::search(
     if (!PvNode && ss->ttHit && (tte->bound() & BOUND_UPPER) && ttValue > alpha + 5 * depth)
         depth--;
 
-    if (   PvNode 
-        && ss->ttHit 
-        && !tte->is_pv()
-        && ss->ply + depth < thisThread->selDepth)
-        depth++;
-
     // Use qsearch if depth <= 0.
     if (depth <= 0)
         return qsearch < PvNode ? PV : NonPV > (pos, ss, alpha, beta);
@@ -1114,6 +1108,12 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 3748)
                 extension = 1;
+
+            else if (   PvNode 
+                     && move == ttMove 
+                     && !tte->is_pv()
+                     && ss->ply + depth < thisThread->selDepth)
+                     extension = 1;
         }
 
         // Add extension to new depth
