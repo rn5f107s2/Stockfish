@@ -568,7 +568,7 @@ Value Search::Worker::search(
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && thisThread->selDepth < ss->ply + 1)
-        thisThread->selDepth = (noQSelDepth = ss->ply) + 1;
+        thisThread->selDepth = noQSelDepth = ss->ply + 1;
 
     if (!rootNode)
     {
@@ -1112,7 +1112,7 @@ moves_loop:  // When in check, search starts here
             else if (   PvNode 
                      && move == ttMove 
                      && !tte->is_pv()
-                     && tte->depth() < noQSelDepth
+                     && ss->ply + tte->depth() < noQSelDepth
                      && ss->ply + depth < thisThread->noQSelDepth)
                      extension = 1;
         }
