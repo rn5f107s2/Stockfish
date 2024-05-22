@@ -836,6 +836,12 @@ Value Search::Worker::search(
     if (!PvNode && ss->ttHit && (tte->bound() & BOUND_UPPER) && ttValue > alpha + 5 * depth)
         depth--;
 
+    if (   PvNode 
+        && ss->ttHit 
+        && !tte->is_pv()
+        && ss->ply + depth < thisThread->selDepth)
+        depth++;
+
     // Use qsearch if depth <= 0.
     if (depth <= 0)
         return qsearch < PvNode ? PV : NonPV > (pos, ss, alpha, beta);
@@ -1435,8 +1441,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     moveCount          = 0;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
-    if (PvNode && thisThread->selDepth < ss->ply + 1)
-        thisThread->selDepth = ss->ply + 1;
+    // if (PvNode && thisThread->selDepth < ss->ply + 1)
+    //     thisThread->selDepth = ss->ply + 1;
 
     // Step 2. Check for an immediate draw or maximum ply reached
     if (pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
