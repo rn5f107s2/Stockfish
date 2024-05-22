@@ -1281,6 +1281,13 @@ moves_loop:  // When in check, search starts here
         {
             bestValue = value;
 
+            if (   !PvNode
+                && move == ttMove
+                && (tte->bound() & (ttValue >= bestValue ? BOUND_LOWER : BOUND_UPPER))
+                && bestValue < beta
+                && tte->depth() > depth + extension)
+                bestValue = ttValue;
+
             if (value > alpha)
             {
                 bestMove = move;
