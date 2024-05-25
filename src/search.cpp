@@ -1099,9 +1099,24 @@ moves_loop:  // When in check, search starts here
                          && value > beta
                          && ss->currentMove)
                 {
-                    mp.setTTM(ss->currentMove);
+                    Move betterMove = ss->currentMove;
 
-                    move = ss->currentMove;
+                    prefetch(tt.first_entry(pos.key_after(move)));
+
+                    ss->continuationHistory = &this->continuationHistory[ss->inCheck][pos.capture_stage(move)][pos.moved_piece(move)][move.to_sq()];
+                    ss->currentMove         = move;
+                    pos.do_move(move, st, givesCheck);
+
+                    Value ttRedSearchValue = -search<NonPV>(pos, ss + 1, -(value + 1), -value, singularDepth, !cutNode);
+
+                    pos.undo_move(move);
+
+                    if (ttRedSearchValue >= value)
+                        return value;
+
+                    mp.setTTM(betterMove);
+
+                    move = betterMove;
 
                     capture    = pos.capture_stage(move);
                     givesCheck = pos.gives_check(move);
