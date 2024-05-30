@@ -1026,6 +1026,14 @@ moves_loop:  // When in check, search starts here
 
                 lmrDepth = std::max(lmrDepth, 0);
 
+                if (ss->inCheck && lmrDepth < 6 && (tte->bound() & BOUND_UPPER)) 
+                {
+                    futilityValue = ttValue + 100 + 150 * lmrDepth;
+
+                    if (futilityValue <= alpha)
+                        continue;
+                }
+
                 // Prune moves with negative SEE (~4 Elo)
                 if (!pos.see_ge(move, -26 * lmrDepth * lmrDepth))
                     continue;
