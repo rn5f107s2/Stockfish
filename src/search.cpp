@@ -908,6 +908,16 @@ moves_loop:  // When in check, search starts here
         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
         return probCutBeta;
 
+    if (   ss->inCheck
+        && (tte->bound() & BOUND_UPPER)
+        && ttValue < alpha - 305 * depth * depth)
+    {
+        value = qsearch<NonPV>(pos, ss, alpha, alpha + 1);
+
+        if (value <= alpha)
+            return value;
+    }
+
     const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
                                         (ss - 2)->continuationHistory,
                                         (ss - 3)->continuationHistory,
