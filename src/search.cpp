@@ -975,7 +975,7 @@ moves_loop:  // When in check, search starts here
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-            moveCountPruning = moveCount >= futility_move_count(improving, depth) - (singularBound == BOUND_UPPER && singularValue < alpha - 50);
+            moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
@@ -1026,6 +1026,11 @@ moves_loop:  // When in check, search starts here
                         bestValue = (bestValue + futilityValue * 3) / 4;
                     continue;
                 }
+
+                if (   depth < 12
+                    && singularBound == BOUND_UPPER
+                    && singularValue + 50 + 50 * lmrDepth <= alpha)
+                    continue;
 
                 lmrDepth = std::max(lmrDepth, 0);
 
