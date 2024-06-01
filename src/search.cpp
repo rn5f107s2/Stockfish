@@ -515,14 +515,6 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
-int singFutPrDepth = 12;
-int singFutPrBase  = 50;
-int singFutPrMult  = 50;
-
-TUNE(SetRange(1, 24), singFutPrDepth);
-TUNE(SetRange(0, 200), singFutPrBase);
-TUNE(SetRange(25, 200), singFutPrMult);
-
 
 // Main search function for both PV and non-PV nodes.
 template<NodeType nodeType>
@@ -1042,9 +1034,10 @@ moves_loop:  // When in check, search starts here
                     continue;
                 }
 
-                if (   depth < singFutPrDepth
+                if (   depth < 12
+                    && bestValue > singularValue
                     && singularBound == BOUND_UPPER
-                    && singularValue + singFutPrBase + singFutPrMult * lmrDepth <= alpha)
+                    && singularValue + 50 + 50 * lmrDepth <= alpha)
                     continue;
 
                 lmrDepth = std::max(lmrDepth, 0);
