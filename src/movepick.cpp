@@ -197,9 +197,15 @@ void MovePicker::score() {
                                                : 0;
 
             // malus for putting piece en prise
-            m.value -= (pt == QUEEN  ? bool(to & threatenedByRook) * 49000
-                        : pt == ROOK ? bool(to & threatenedByMinor) * 24335
-                                     : bool(to & threatenedByPawn) * 14900);
+            m.value -= !(threatenedPieces & from) ?
+                        (pt == QUEEN ?   bool(to & threatenedByRook)  * 50000
+                                       + bool(to & threatenedByMinor) * 10000
+                                       + bool(to & threatenedByPawn)  * 20000
+                       : pt == ROOK  ?   bool(to & threatenedByMinor) * 25000
+                                       + bool(to & threatenedByPawn)  * 10000
+                       : pt != PAWN ?    bool(to & threatenedByPawn)  * 15000
+                       :                                                0 )
+                       :                                                0 ;
         }
 
         else  // Type == EVASIONS
