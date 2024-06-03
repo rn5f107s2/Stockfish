@@ -1338,7 +1338,7 @@ moves_loop:  // When in check, search starts here
         bestValue = excludedMove ? alpha : ss->inCheck ? mated_in(ss->ply) : VALUE_DRAW;
 
     // If there is a move that produces search value greater than alpha we update the stats of searched moves
-    else if (bestMove)
+    else if (bestMove || excludedMove)
         update_all_stats(pos, ss, *this, bestMove, bestValue, beta, prevSq, quietsSearched,
                          quietCount, capturesSearched, captureCount, depth);
 
@@ -1763,16 +1763,19 @@ void update_all_stats(const Position& pos,
     int quietMoveBonus = stat_bonus(depth + 1);
     int quietMoveMalus = stat_malus(depth);
 
-    if (!pos.capture_stage(bestMove))
+    if (!bestMove || !pos.capture_stage(bestMove))
     {
         int bestMoveBonus = bestValue > beta + 176 ? quietMoveBonus      // larger bonus
                                                    : stat_bonus(depth);  // smaller bonus
 
-        update_quiet_stats(pos, ss, workerThread, bestMove, bestMoveBonus);
-
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
             update_quiet_histories(pos, ss, workerThread, quietsSearched[i], -quietMoveMalus);
+
+        if (!bestMove)
+            return;
+
+        update_quiet_stats(pos, ss, workerThread, bestMove, bestMoveBonus);
     }
     else
     {
