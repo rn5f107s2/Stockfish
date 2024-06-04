@@ -279,6 +279,14 @@ void Search::Worker::iterative_deepening() {
 
     int searchAgainCounter = 0;
 
+    int id = 0;
+
+    for (RootMove &rm : rootMoves)
+        rm.id = id++;
+
+    for (int i = 0; i < MAX_MOVES; i++)
+        rmSpecificMainHistoryTable[i].fill(0);
+
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (++rootDepth < MAX_PLY && !threads.stop
            && !(limits.depth && mainThread && rootDepth > limits.depth))
@@ -483,6 +491,8 @@ void Search::Worker::iterative_deepening() {
         mainThread->iterValue[iterIdx] = bestValue;
         iterIdx                        = (iterIdx + 1) & 3;
     }
+
+    mainHistory = rmSpecificMainHistoryTable[rootMoves[0].id];
 
     if (!mainThread)
         return;
@@ -745,6 +755,7 @@ Value Search::Worker::search(
         int bonus = std::clamp(-11 * int((ss - 1)->staticEval + ss->staticEval), -1592, 1390);
         bonus     = bonus > 0 ? 2 * bonus : bonus / 2;
         thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()] << bonus;
+        (*thisThread->rmSpecificMainHistory)[~us][((ss - 1)->currentMove).from_to()] << bonus;
         if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
             thisThread->pawnHistory[pawn_structure_index(pos)][pos.piece_on(prevSq)][prevSq]
               << bonus / 2;
@@ -957,6 +968,14 @@ moves_loop:  // When in check, search starts here
         }
         if (PvNode)
             (ss + 1)->pv = nullptr;
+
+        if (rootNode)
+        {
+            RootMove& rm =
+              *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+
+            thisThread->rmSpecificMainHistory = &rmSpecificMainHistoryTable[rm.id];
+        }
 
         extension  = 0;
         capture    = pos.capture_stage(move);
@@ -1352,6 +1371,8 @@ moves_loop:  // When in check, search starts here
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                       stat_bonus(depth) * bonus / 100);
         thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()]
+          << stat_bonus(depth) * bonus / 200;
+        (*thisThread->rmSpecificMainHistory)[~us][((ss - 1)->currentMove).from_to()]
           << stat_bonus(depth) * bonus / 200;
 
 
@@ -1838,6 +1859,7 @@ void update_quiet_histories(
 
     Color us = pos.side_to_move();
     workerThread.mainHistory[us][move.from_to()] << bonus;
+    (*workerThread.rmSpecificMainHistory)[us][move.from_to()] << bonus;
 
     update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus);
 

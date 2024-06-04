@@ -99,6 +99,7 @@ struct RootMove {
     bool              scoreUpperbound = false;
     int               selDepth        = 0;
     int               tbRank          = 0;
+    int               id              = 0;
     Value             tbScore;
     std::vector<Move> pv;
 };
@@ -249,6 +250,8 @@ class Worker {
     // Public because they need to be updatable by the stats
     CounterMoveHistory    counterMoves;
     ButterflyHistory      mainHistory;
+    ButterflyHistory*      rmSpecificMainHistory;
+    ButterflyHistory      rmSpecificMainHistoryTable[MAX_MOVES];
     CapturePieceToHistory captureHistory;
     ContinuationHistory   continuationHistory[2][2];
     PawnHistory           pawnHistory;
