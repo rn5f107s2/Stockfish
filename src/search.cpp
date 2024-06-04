@@ -285,7 +285,7 @@ void Search::Worker::iterative_deepening() {
         rm.id = id++;
 
     for (int i = 0; i < MAX_MOVES; i++)
-        rmSpecificMainHistoryTable[i].fill(0);
+        memcpy(&rmSpecificMainHistoryTable[i], &mainHistory, sizeof(ButterflyHistory));
 
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (++rootDepth < MAX_PLY && !threads.stop
