@@ -261,6 +261,11 @@ void Search::Worker::iterative_deepening() {
 
     int searchAgainCounter = 0;
 
+    int id = 0;
+
+    for (RootMove &rm : rootMoves)
+        rm.id = id++;
+
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (++rootDepth < MAX_PLY && !threads.stop
            && !(limits.depth && mainThread && rootDepth > limits.depth))
@@ -470,6 +475,9 @@ void Search::Worker::iterative_deepening() {
         iterIdx                        = (iterIdx + 1) & 3;
     }
 
+    for (int i = 0; i < MAX_MOVES; i++)
+        rmSpecificMainHistoryTable[i] = rmSpecificMainHistoryTable[rootMoves[0].id];
+
     if (!mainThread)
         return;
 
@@ -484,7 +492,6 @@ void Search::Worker::iterative_deepening() {
 
 // Reset histories, usually before a new game
 void Search::Worker::clear() {
-    mainHistory.fill(0);
     captureHistory.fill(-700);
     pawnHistory.fill(-1188);
     correctionHistory.fill(0);
@@ -497,6 +504,9 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((18.62 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+
+    for (int i = 0; i < MAX_MOVES; i++)
+        rmSpecificMainHistoryTable[i].fill(0);
 
     refreshTable.clear(networks[numaAccessToken]);
 }
@@ -733,7 +743,7 @@ Value Search::Worker::search(
     if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
     {
         int bonus = std::clamp(-10 * int((ss - 1)->staticEval + ss->staticEval), -1664, 1471) + 752;
-        thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()] << bonus;
+        (*thisThread->rmSpecificMainHistory)[~us][((ss - 1)->currentMove).from_to()] << bonus;
         if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
             thisThread->pawnHistory[pawn_structure_index(pos)][pos.piece_on(prevSq)][prevSq]
               << bonus / 2;
@@ -908,7 +918,10 @@ moves_loop:  // When in check, search starts here
                                         (ss - 6)->continuationHistory};
 
 
-    MovePicker mp(pos, ttData.move, depth, &thisThread->mainHistory, &thisThread->captureHistory,
+    thisThread->rmSpecificMainHistory = &rmSpecificMainHistoryTable[thisThread->rootMoves[0].id];
+
+
+    MovePicker mp(pos, ttData.move, depth, thisThread->rmSpecificMainHistory, &thisThread->captureHistory,
                   contHist, &thisThread->pawnHistory);
 
     value = bestValue;
@@ -946,6 +959,14 @@ moves_loop:  // When in check, search starts here
         }
         if (PvNode)
             (ss + 1)->pv = nullptr;
+
+        if (rootNode)
+        {
+            RootMove& rm =
+              *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+
+            thisThread->rmSpecificMainHistory = &rmSpecificMainHistoryTable[rm.id];
+        }
 
         extension  = 0;
         capture    = pos.capture_stage(move);
@@ -1000,7 +1021,7 @@ moves_loop:  // When in check, search starts here
                 if (history < -4165 * depth)
                     continue;
 
-                history += 2 * thisThread->mainHistory[us][move.from_to()];
+                history += 2 * (*thisThread->rmSpecificMainHistory)[us][move.from_to()];
 
                 lmrDepth += history / 3853;
 
@@ -1148,7 +1169,7 @@ moves_loop:  // When in check, search starts here
         else if (move == ttData.move)
             r = std::max(0, r - 2);
 
-        ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
+        ss->statScore = 2 * (*thisThread->rmSpecificMainHistory)[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()] - 4664;
 
@@ -1352,7 +1373,7 @@ moves_loop:  // When in check, search starts here
 
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                       stat_bonus(depth) * bonus / 116);
-        thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()]
+        (*thisThread->rmSpecificMainHistory)[~us][((ss - 1)->currentMove).from_to()]
           << stat_bonus(depth) * bonus / 180;
 
 
@@ -1363,7 +1384,7 @@ moves_loop:  // When in check, search starts here
 
     // Bonus when search fails low and there is a TT move
     else if (moveCount > 1 && ttData.move && (cutNode || PvNode))
-        thisThread->mainHistory[us][ttData.move.from_to()] << stat_bonus(depth) / 4;
+        (*thisThread->rmSpecificMainHistory)[us][ttData.move.from_to()] << stat_bonus(depth) / 4;
 
     if (PvNode)
         bestValue = std::min(bestValue, maxValue);
@@ -1529,7 +1550,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     // Initialize a MovePicker object for the current position, and prepare to search
     // the moves. We presently use two stages of move generator in quiescence search:
     // captures, or evasions only when in check.
-    MovePicker mp(pos, ttData.move, DEPTH_QS, &thisThread->mainHistory, &thisThread->captureHistory,
+    MovePicker mp(pos, ttData.move, DEPTH_QS, thisThread->rmSpecificMainHistory, &thisThread->captureHistory,
                   contHist, &thisThread->pawnHistory);
 
     // Step 5. Loop through all pseudo-legal moves until no moves remain or a beta
@@ -1808,7 +1829,7 @@ void update_quiet_histories(
   const Position& pos, Stack* ss, Search::Worker& workerThread, Move move, int bonus) {
 
     Color us = pos.side_to_move();
-    workerThread.mainHistory[us][move.from_to()] << bonus;
+    (*workerThread.rmSpecificMainHistory)[us][move.from_to()] << bonus;
 
     update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus);
 
