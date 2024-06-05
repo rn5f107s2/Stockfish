@@ -1108,6 +1108,9 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 3988)
                 extension = 1;
+
+            else if (singularBound == BOUND_LOWER && move == ss->killers[0])
+                extension = 1;
         }
 
         // Add extension to new depth
