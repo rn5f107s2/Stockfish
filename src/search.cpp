@@ -1109,7 +1109,10 @@ moves_loop:  // When in check, search starts here
                           > 3922)
                 extension = 1;
 
-            else if (singularBound == BOUND_LOWER && move == ss->killers[0])
+            else if (  singularBound == BOUND_LOWER 
+                    && move == ss->killers[0] 
+                    && prevSq != SQ_NONE
+                    && move == thisThread->counterMoves[pos.piece_on(prevSq)][prevSq])
                 extension = 1;
         }
 
