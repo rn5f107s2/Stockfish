@@ -253,6 +253,7 @@ class Worker {
     ContinuationHistory   continuationHistory[2][2];
     PawnHistory           pawnHistory;
     CorrectionHistory     correctionHistory;
+    Depth                 rootDepth;
 
    private:
     void iterative_deepening();
@@ -288,7 +289,7 @@ class Worker {
     Position  rootPos;
     StateInfo rootState;
     RootMoves rootMoves;
-    Depth     rootDepth, completedDepth;
+    Depth     completedDepth;
     Value     rootDelta;
 
     size_t                    threadIdx;
