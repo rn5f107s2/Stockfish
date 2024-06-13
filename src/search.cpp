@@ -610,7 +610,7 @@ Value Search::Worker::search(
     // Need further processing of the saved data
     ss->ttHit    = ttHit;
     ttData.move  = rootNode ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
-                 : ttHit    ? ttData.move
+                 : ttHit    ? ttData.move 
                             : Move::none();
     ttData.value = ttHit ? value_from_tt(ttData.value, ss->ply, pos.rule50_count()) : VALUE_NONE;
     ss->ttPv     = excludedMove ? ss->ttPv : PvNode || (ttHit && ttData.is_pv);
@@ -1173,12 +1173,13 @@ moves_loop:  // When in check, search starts here
 
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
 
+            const bool doDeeperSearch    = value > (bestValue + 35 + 2 * newDepth);  // (~1 Elo)
+
             // Do a full-depth search when reduced LMR search fails high
-            if (value > alpha && d < newDepth)
+            if (value > alpha && d < newDepth + doDeeperSearch)
             {
                 // Adjust full-depth search based on LMR results - if the result
                 // was good enough search deeper, if it was bad enough search shallower.
-                const bool doDeeperSearch    = value > (bestValue + 35 + 2 * newDepth);  // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;             // (~2 Elo)
 
                 newDepth += doDeeperSearch - doShallowerSearch;
