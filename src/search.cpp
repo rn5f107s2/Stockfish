@@ -972,6 +972,10 @@ moves_loop:  // When in check, search starts here
 
         Depth r = reduction(improving, depth, moveCount, delta);
 
+        // Increase reduction if ttMove is a capture (~3 Elo)
+        if (ttCapture)
+            r++;
+
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
@@ -1149,10 +1153,6 @@ moves_loop:  // When in check, search starts here
         if (cutNode)
             r += 2 - (ttData.depth >= depth && ss->ttPv)
                + (!ss->ttPv && move != ttData.move && move != ss->killers[0]);
-
-        // Increase reduction if ttMove is a capture (~3 Elo)
-        if (ttCapture)
-            r++;
 
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
         if ((ss + 1)->cutoffCnt > 3)
