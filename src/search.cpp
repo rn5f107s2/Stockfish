@@ -1110,6 +1110,11 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 3922)
                 extension = 1;
+
+            else if (   move == ttData.move
+                     && !ttCapture
+                     && (ttData.value - ss->staticEval) > 250)
+                    extension = 1;
         }
 
         // Add extension to new depth
