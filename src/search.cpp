@@ -557,7 +557,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta, singularValue;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, moveCountPruning, ttCapture;
+    bool  capture, moveCountPruning, ttCapture, posSeeTTCap;
     Piece movedPiece;
     int   moveCount, captureCount, quietCount;
     Bound singularBound;
@@ -928,6 +928,7 @@ moves_loop:  // When in check, search starts here
     moveCountPruning = false;
     singularValue    = VALUE_INFINITE;
     singularBound    = BOUND_NONE;
+    posSeeTTCap      = ttCapture && pos.see_ge(ttData.move, Value(1));
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -982,7 +983,7 @@ moves_loop:  // When in check, search starts here
                              - (singularBound == BOUND_UPPER && singularValue < alpha - 50);
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r;
+            int lmrDepth = newDepth - r - posSeeTTCap;
 
             if (capture || givesCheck)
             {
