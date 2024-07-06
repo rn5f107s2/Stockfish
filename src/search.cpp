@@ -811,6 +811,9 @@ Value Search::Worker::search(
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
 
+        if ((ss-2)->currentMove.is_ok()) 
+            ss->continuationHistory = (ss-2)->continuationHistory;
+
         pos.do_null_move(st, tt);
 
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
