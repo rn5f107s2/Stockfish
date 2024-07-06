@@ -1083,7 +1083,7 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY && (ttData.bound & BOUND_LOWER)
                 && ttData.depth >= depth - 3)
             {
-                Value singularBeta  = ttData.value - (54 + 76 * (ss->ttPv && !PvNode)) * depth / 64;
+                Value singularBeta  = ttData.value - 8;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
