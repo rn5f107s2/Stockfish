@@ -229,7 +229,9 @@ top:
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
-
+      
+        dbg_hit_on(endMoves - cur == sizeof(ExtMove));
+      
         score<CAPTURES>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
         ++stage;
