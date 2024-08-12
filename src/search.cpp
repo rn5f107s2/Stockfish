@@ -1041,16 +1041,16 @@ moves_loop:  // When in check, search starts here
             // time controls. Generally, higher singularBeta (i.e closer to ttValue)
             // and lower extension margins scale well.
 
-            if (!rootNode && depth >= 4 - (thisThread->completedDepth > 36) + ss->ttPv
+            if (!rootNode
                 && !excludedMove
-                && ((move == ttData.move && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY
+                && ((move == ttData.move && depth >= 4 - (thisThread->completedDepth > 36) + ss->ttPv && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY
                      && (ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 3)
-                    || (moveCount == 1 && !ttHit && mp.singularGoodCapture())))
+                    || (moveCount == 1 && !ttHit && mp.singularGoodCapture() && depth < 4)))
             {
                 Value singularBeta  = ttHit
                                       ? ttData.value - (54 + 76 * (ss->ttPv && !PvNode)) * depth / 64
                                       : alpha - 100;
-                Depth singularDepth = newDepth / 2;
+                Depth singularDepth = std::max(newDepth / 2, 1);
 
                 ss->excludedMove = move;
                 value =
