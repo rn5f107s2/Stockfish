@@ -230,6 +230,8 @@ top:
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
 
+        captureCount = endMoves - moves;
+
         score<CAPTURES>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
         ++stage;
@@ -314,5 +316,7 @@ top:
     assert(false);
     return Move::none();  // Silence warning
 }
+
+bool MovePicker::singularGoodCapture() { return stage == GOOD_CAPTURE && captureCount == 1; }
 
 }  // namespace Stockfish
