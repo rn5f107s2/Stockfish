@@ -1041,15 +1041,12 @@ moves_loop:  // When in check, search starts here
             // time controls. Generally, higher singularBeta (i.e closer to ttValue)
             // and lower extension margins scale well.
 
-            if (!rootNode && depth >= 4 - (thisThread->completedDepth > 36) + ss->ttPv
-                && !excludedMove
-                && ((move == ttData.move && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY
-                     && (ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 3)
-                    || (moveCount == 1 && !ttHit && mp.singularGoodCapture())))
+            if (!rootNode && move == ttData.move && !excludedMove
+                && depth >= 4 - (thisThread->completedDepth > 36) + ss->ttPv
+                && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY && (ttData.bound & BOUND_LOWER)
+                && ttData.depth >= depth - 3)
             {
-                Value singularBeta  = ttHit
-                                      ? ttData.value - (54 + 76 * (ss->ttPv && !PvNode)) * depth / 64
-                                      : alpha - 100;
+                Value singularBeta  = ttData.value - (54 + 76 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1062,14 +1059,11 @@ moves_loop:  // When in check, search starts here
                     int doubleMargin = 293 * PvNode - 195 * !ttCapture;
                     int tripleMargin = 107 + 259 * PvNode - 260 * !ttCapture + 98 * ss->ttPv;
 
-                    extension = 1 + (value < singularBeta - doubleMargin && ttHit)
-                              + (value < singularBeta - tripleMargin && ttHit);
+                    extension = 1 + (value < singularBeta - doubleMargin)
+                              + (value < singularBeta - tripleMargin);
 
-                    depth += ((!PvNode) && (depth < 16)) && ttHit;
+                    depth += ((!PvNode) && (depth < 16));
                 }
-
-                else if (!ttHit)
-                {}
 
                 // Multi-cut pruning
                 // Our ttMove is assumed to fail high based on the bound of the TT entry,
@@ -1102,6 +1096,9 @@ moves_loop:  // When in check, search starts here
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 3994)
+                extension = 1;
+
+            else if (moveCount == 1 && !ttHit && mp.singularGoodCapture())
                 extension = 1;
         }
 
