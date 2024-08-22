@@ -1172,7 +1172,7 @@ moves_loop:  // When in check, search starts here
             {
                 // Adjust full-depth search based on LMR results - if the result was
                 // good enough search deeper, if it was bad enough search shallower.
-                const bool nightmare         = bestValue < alpha - 25;
+                const bool nightmare         = bestValue < alpha - 25 && moveCount > 3;
                 const bool doDeeperSearch    = value > (bestValue + 35 + 2 * newDepth);  // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + 8;                    // (~2 Elo)
 
