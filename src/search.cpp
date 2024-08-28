@@ -605,6 +605,19 @@ Value Search::Worker::search(
     ss->ttPv     = excludedMove ? ss->ttPv : PvNode || (ttHit && ttData.is_pv);
     ttCapture    = ttData.move && pos.capture_stage(ttData.move);
 
+    auto staticEvalHistoryUpdate = ([&](Value diff) 
+    {
+        if (!((ss - 1)->currentMove).is_ok() || (ss - 1)->inCheck || priorCapture)
+            return;
+
+        int bonus = std::clamp(-10 * int(diff), -1664, 1471) + 752;
+        thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()] << bonus;
+
+        if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
+            thisThread->pawnHistory[pawn_structure_index(pos)][pos.piece_on(prevSq)][prevSq]
+              << bonus / 2;
+    });
+
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
 
@@ -731,14 +744,7 @@ Value Search::Worker::search(
     }
 
     // Use static evaluation difference to improve quiet move ordering (~9 Elo)
-    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
-    {
-        int bonus = std::clamp(-10 * int((ss - 1)->staticEval + ss->staticEval), -1664, 1471) + 752;
-        thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()] << bonus;
-        if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
-            thisThread->pawnHistory[pawn_structure_index(pos)][pos.piece_on(prevSq)][prevSq]
-              << bonus / 2;
-    }
+    staticEvalHistoryUpdate((ss - 1)->staticEval + ss->staticEval);
 
     // Set up the improving flag, which is true if current static evaluation is
     // bigger than the previous static evaluation at our turn (if we were in
@@ -1372,7 +1378,14 @@ moves_loop:  // When in check, search starts here
     // If no good move is found and the previous position was ttPv, then the previous
     // opponent move is probably good and the new position is added to the search tree. (~7 Elo)
     if (bestValue <= alpha)
+    {
         ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3);
+
+        Value diff = (ss - 1)->staticEval + ss->staticEval;
+
+        if (diff > 0)
+            staticEvalHistoryUpdate(-diff);
+    }
 
     // Write gathered information in transposition table. Note that the
     // static evaluation is saved as it was before correction history.
