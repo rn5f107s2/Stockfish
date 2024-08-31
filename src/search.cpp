@@ -1229,6 +1229,13 @@ moves_loop:  // When in check, search starts here
         if (threads.stop.load(std::memory_order_relaxed))
             return VALUE_ZERO;
 
+        if (rootNode && firstSearch)
+        {
+            depth       = thisThread->rootDepth + 1;
+            firstSearch = false;
+            goto search_move;
+        }
+
         if (rootNode)
         {
             RootMove& rm =
@@ -1310,13 +1317,6 @@ moves_loop:  // When in check, search starts here
                     alpha = value;  // Update alpha! Always alpha < beta
                 }
             }
-        }
-
-        if (rootNode && firstSearch)
-        {
-            depth       = thisThread->rootDepth + 1;
-            firstSearch = false;
-            goto search_move;
         }
 
         // If the move is worse than some previously searched move,
