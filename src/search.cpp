@@ -262,7 +262,7 @@ void Search::Worker::iterative_deepening() {
     int searchAgainCounter = 0;
 
     // Iterative deepening loop until requested to stop or the target depth is reached
-    while (++rootDepth < MAX_PLY && !threads.stop
+    while ((rootDepth += 2) < MAX_PLY && !threads.stop
            && !(limits.depth && mainThread && rootDepth > limits.depth))
     {
         // Age out PV variability metric
@@ -540,7 +540,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture;
+    bool  capture, ttCapture, firstSearch;
     Piece movedPiece;
 
     ValueList<Move, 32> capturesSearched;
@@ -923,6 +923,8 @@ moves_loop:  // When in check, search starts here
     {
         assert(move.is_ok());
 
+        firstSearch = true;
+
         if (move == excludedMove)
             continue;
 
@@ -939,6 +941,8 @@ moves_loop:  // When in check, search starts here
             continue;
 
         ss->moveCount = ++moveCount;
+
+        search_move:
 
         if (rootNode && is_mainthread() && nodes > 10000000)
         {
@@ -1306,6 +1310,13 @@ moves_loop:  // When in check, search starts here
                     alpha = value;  // Update alpha! Always alpha < beta
                 }
             }
+        }
+
+        if (rootNode && firstSearch)
+        {
+            depth       = thisThread->rootDepth + 1;
+            firstSearch = false;
+            goto search_move;
         }
 
         // If the move is worse than some previously searched move,
