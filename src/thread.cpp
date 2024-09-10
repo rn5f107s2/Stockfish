@@ -33,6 +33,7 @@
 #include "types.h"
 #include "uci.h"
 #include "ucioption.h"
+#include "policy/policyNet.h"
 
 namespace Stockfish {
 
@@ -249,6 +250,7 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
 
     increaseDepth = true;
 
+    int               policies[64][64];
     Search::RootMoves rootMoves;
     const auto        legalmoves = MoveList<LEGAL>(pos);
 
@@ -263,6 +265,31 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
     if (rootMoves.empty())
         for (const auto& m : legalmoves)
             rootMoves.emplace_back(m);
+
+    Network* net = new Network();
+    std::array<std::array<std::array<float, 10>, 10>, 12> input;
+
+    std::array<Bitboard, 13> bbArray = 
+    { 
+                                         pos.pieces(WHITE, PAWN),
+                                         pos.pieces(WHITE, KNIGHT),
+                                         pos.pieces(WHITE, BISHOP),
+                                         pos.pieces(WHITE, ROOK),
+                                         pos.pieces(WHITE, QUEEN),
+                                         pos.pieces(WHITE, KING),
+                                         pos.pieces(BLACK, PAWN),
+                                         pos.pieces(BLACK, KNIGHT),
+                                         pos.pieces(BLACK, BISHOP),
+                                         pos.pieces(BLACK, ROOK),
+                                         pos.pieces(BLACK, QUEEN),
+                                         pos.pieces(BLACK, KING),
+                                         0x1234
+
+    };
+
+    bbsToPaddedInput(bbArray, pos.side_to_move() == WHITE, input);
+    net->loadDefault();
+    net->scoreMoveList(input, rootMoves, policies, pos.side_to_move() == WHITE);
 
     Tablebases::Config tbConfig = Tablebases::rank_root_moves(options, pos, rootMoves);
 
@@ -289,6 +316,7 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
             th->worker->rootPos.set(pos.fen(), pos.is_chess960(), &th->worker->rootState);
             th->worker->rootState = setupStates->back();
             th->worker->tbConfig  = tbConfig;
+            memcpy(th->worker->policies, policies, 64 * 64 * sizeof(int));
         });
     }
 

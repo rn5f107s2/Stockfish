@@ -173,7 +173,8 @@ class MovePicker {
                const ButterflyHistory*,
                const CapturePieceToHistory*,
                const PieceToHistory**,
-               const PawnHistory*);
+               const PawnHistory*,
+               int(*)[64] = nullptr);
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
     Move next_move(bool skipQuiets = false);
 
@@ -196,6 +197,7 @@ class MovePicker {
     int                          threshold;
     Depth                        depth;
     ExtMove                      moves[MAX_MOVES];
+    int (*policies)[64];
 };
 
 }  // namespace Stockfish
