@@ -251,6 +251,7 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
     increaseDepth = true;
 
     int               policies[64][64];
+    memset(&(policies[0][0]), 0, sizeof(int) * 64 * 64);
     Search::RootMoves rootMoves;
     const auto        legalmoves = MoveList<LEGAL>(pos);
 
