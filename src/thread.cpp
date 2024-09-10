@@ -266,24 +266,22 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
         for (const auto& m : legalmoves)
             rootMoves.emplace_back(m);
 
-    Network* net = new Network();
+    Network*                                              net = new Network();
     std::array<std::array<std::array<float, 10>, 10>, 12> input;
 
-    std::array<Bitboard, 13> bbArray = 
-    { 
-                                         pos.pieces(WHITE, PAWN),
-                                         pos.pieces(WHITE, KNIGHT),
-                                         pos.pieces(WHITE, BISHOP),
-                                         pos.pieces(WHITE, ROOK),
-                                         pos.pieces(WHITE, QUEEN),
-                                         pos.pieces(WHITE, KING),
-                                         pos.pieces(BLACK, PAWN),
-                                         pos.pieces(BLACK, KNIGHT),
-                                         pos.pieces(BLACK, BISHOP),
-                                         pos.pieces(BLACK, ROOK),
-                                         pos.pieces(BLACK, QUEEN),
-                                         pos.pieces(BLACK, KING),
-                                         0x1234
+    std::array<Bitboard, 13> bbArray = {pos.pieces(WHITE, PAWN),
+                                        pos.pieces(WHITE, KNIGHT),
+                                        pos.pieces(WHITE, BISHOP),
+                                        pos.pieces(WHITE, ROOK),
+                                        pos.pieces(WHITE, QUEEN),
+                                        pos.pieces(WHITE, KING),
+                                        pos.pieces(BLACK, PAWN),
+                                        pos.pieces(BLACK, KNIGHT),
+                                        pos.pieces(BLACK, BISHOP),
+                                        pos.pieces(BLACK, ROOK),
+                                        pos.pieces(BLACK, QUEEN),
+                                        pos.pieces(BLACK, KING),
+                                        0x1234
 
     };
 

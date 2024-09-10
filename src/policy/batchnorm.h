@@ -14,9 +14,9 @@ class Batchnorm {
 
     const float epsilon = 1e-5;
 
-    using Input   = std::array<std::array<std::array<float, DIM2_PADDED>, DIM1_PADDED>, CHANNEL>;
-    using Output  = Input;
-    using Params  = std::array<float, CHANNEL>;
+    using Input  = std::array<std::array<std::array<float, DIM2_PADDED>, DIM1_PADDED>, CHANNEL>;
+    using Output = Input;
+    using Params = std::array<float, CHANNEL>;
 
     Output output;
     Params weights;
@@ -24,13 +24,16 @@ class Batchnorm {
     Params variance;
     Params mean;
 
-public:
-    Output& forward(Input &input, Input* skip = nullptr) {
-        for (int i = 0; i < CHANNEL; i++) {
+   public:
+    Output& forward(Input& input, Input* skip = nullptr) {
+        for (int i = 0; i < CHANNEL; i++)
+        {
             float div = std::sqrt(variance[i] + epsilon);
 
-            for (int j = PADDING; j < DIM1 + PADDING; j++) {
-                for (int k = PADDING; k < DIM2 + PADDING; k++) {
+            for (int j = PADDING; j < DIM1 + PADDING; j++)
+            {
+                for (int k = PADDING; k < DIM2 + PADDING; k++)
+                {
                     output[i][j][k] = ((input[i][j][k] - mean[i]) / div) * weights[i] + biases[i];
 
                     if (skip)
@@ -51,10 +54,10 @@ public:
         return output;
     }
 
-    void loadWeights(std::istream &in) {
-        in.read(reinterpret_cast<char*>(&weights),  sizeof(Params));
-        in.read(reinterpret_cast<char*>(&biases),   sizeof(Params));
+    void loadWeights(std::istream& in) {
+        in.read(reinterpret_cast<char*>(&weights), sizeof(Params));
+        in.read(reinterpret_cast<char*>(&biases), sizeof(Params));
         in.read(reinterpret_cast<char*>(&variance), sizeof(Params));
-        in.read(reinterpret_cast<char*>(&mean),     sizeof(Params));
+        in.read(reinterpret_cast<char*>(&mean), sizeof(Params));
     }
 };

@@ -10,14 +10,15 @@ struct Block {
     using Output = Input;
 
     ConvolutionalLayer<FILTER, FILTER> cl1;
-    Batchnorm         <FILTER        > bn1;
+    Batchnorm<FILTER>                  bn1;
     ConvolutionalLayer<FILTER, FILTER> cl2;
-    Batchnorm         <FILTER        > bn2;
+    Batchnorm<FILTER>                  bn2;
 
-    Output& forward(Input &input) {
-        Input identity; memcpy(&identity, &input, sizeof(Input));
+    Output& forward(Input& input) {
+        Input identity;
+        memcpy(&identity, &input, sizeof(Input));
 
-        Output &out = cl1.forward(input);
+        Output& out = cl1.forward(input);
         bn1.forward(out);
         out = bn1.ReLUInplace();
         out = cl2.forward(out);
@@ -27,7 +28,7 @@ struct Block {
         return out;
     }
 
-    void loadWeights(std::istream &in) {
+    void loadWeights(std::istream& in) {
         cl1.loadWeights(in);
         bn1.loadWeights(in);
         cl2.loadWeights(in);
