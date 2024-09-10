@@ -68,7 +68,7 @@ void bbsToPaddedInput(std::array<Bitboard, 13>&                              bit
                       std::array<std::array<std::array<float, 10>, 10>, 12>& input) {
     memset(&input, 0, sizeof(input));
 
-    for (int pc = 0; pc < 13; pc++)
+    for (int pc = 0; pc < 12; pc++)
     {
         Bitboard pieceBB = bitboards[pc];
 

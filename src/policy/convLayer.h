@@ -25,20 +25,6 @@ class ConvolutionalLayer {
     Weights weights;
 
    public:
-    ConvolutionalLayer() {
-        for (int a = 0; a < 2; a++)
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                for (int j = 0; j < 10; j++)
-                {
-                    biases[a][i][j]     = 0.0f;
-                    weights[0][a][i][j] = 1.0f + a;
-                }
-            }
-        }
-    }
-
     Output& forward(Input& input) {
         memcpy(&output, &biases, sizeof(Biases));
 
