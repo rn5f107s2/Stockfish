@@ -288,6 +288,7 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
     bbsToPaddedInput(bbArray, pos.side_to_move() == WHITE, input);
     net->loadDefault();
     net->scoreMoveList(input, rootMoves, policies, pos.side_to_move() == WHITE);
+    delete net;
 
     Tablebases::Config tbConfig = Tablebases::rank_root_moves(options, pos, rootMoves);
 
