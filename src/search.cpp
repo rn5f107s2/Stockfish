@@ -544,7 +544,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture;
+    bool  capture, ttCapture, playedMove;
     Piece movedPiece;
 
     ValueList<Move, 32> capturesSearched;
@@ -955,6 +955,7 @@ moves_loop:  // When in check, search starts here
         capture    = pos.capture_stage(move);
         movedPiece = pos.moved_piece(move);
         givesCheck = pos.gives_check(move);
+        playedMove = false;
 
         // Calculate new depth for this move
         newDepth = depth - 1;
@@ -1045,10 +1046,39 @@ moves_loop:  // When in check, search starts here
             // time controls. Generally, higher singularBeta (i.e closer to ttValue)
             // and lower extension margins scale well.
 
-            if (!rootNode && move == ttData.move && !excludedMove
+            bool singularExtend = !rootNode && move == ttData.move && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 36) + ss->ttPv
-                && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY && (ttData.bound & BOUND_LOWER)
-                && ttData.depth >= depth - 3)
+                && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY;
+
+            if (   singularExtend
+                && ttData.depth < depth - 3
+                && ttData.bound == BOUND_UPPER)
+            {
+                Depth d = depth - 3;
+
+                prefetch(tt.first_entry(pos.key_after(move)));
+
+                ss->currentMove = move;
+                ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck][capture][movedPiece][move.to_sq()];
+
+                pos.do_move(move, st, givesCheck);
+
+                value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, !cutNode);
+
+                if (value > alpha) 
+                {
+                    ttData.bound = BOUND_LOWER;
+                    ttData.value = value;
+                    ttData.depth = depth - 2;
+                    pos.undo_move(move);
+                } 
+                else
+                    playedMove = true;
+            }
+
+            if (    singularExtend
+                && ttData.depth >= depth - 3
+                && (ttData.bound & BOUND_LOWER))
             {
                 Value singularBeta  = ttData.value - (54 + 76 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
@@ -1106,19 +1136,22 @@ moves_loop:  // When in check, search starts here
         // Add extension to new depth
         newDepth += extension;
 
-        // Speculative prefetch as early as possible
-        prefetch(tt.first_entry(pos.key_after(move)));
-
-        // Update the current move (this must be done after singular extension search)
-        ss->currentMove = move;
-        ss->continuationHistory =
-          &thisThread->continuationHistory[ss->inCheck][capture][movedPiece][move.to_sq()];
-
         uint64_t nodeCount = rootNode ? uint64_t(nodes) : 0;
 
-        // Step 16. Make the move
-        thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
-        pos.do_move(move, st, givesCheck);
+        if (!playedMove) 
+        {
+            // Speculative prefetch as early as possible
+            prefetch(tt.first_entry(pos.key_after(move)));
+
+            // Update the current move (this must be done after singular extension search)
+            ss->currentMove = move;
+            ss->continuationHistory =
+            &thisThread->continuationHistory[ss->inCheck][capture][movedPiece][move.to_sq()];
+
+            // Step 16. Make the move
+            thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
+            pos.do_move(move, st, givesCheck);
+        }
 
         // These reduction adjustments have proven non-linear scaling.
         // They are optimized to time controls of 180 + 1.8 and longer,
