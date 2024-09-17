@@ -1028,7 +1028,8 @@ Key Position::pattern_key(Square sq) const {
     Bitboard fileBB = file_bb(sq);
     Bitboard mask   =   ((shift<SOUTH>(rankBB) | rankBB | shift<NORTH>(rankBB))
                       &  (shift<WEST >(fileBB) | fileBB | shift<EAST >(fileBB))) ^ square_bb(sq);
-    Key key = 0;
+    Key key    = 0;
+    int offset = sq - 9;
 
     for (Color c : {sideToMove, ~sideToMove})
     {
@@ -1037,7 +1038,7 @@ Key Position::pattern_key(Square sq) const {
             Bitboard pcBB = pieces(c, pt) & mask;
             
             while (pcBB) {
-                int square = pop_lsb(pcBB);
+                int square = pop_lsb(pcBB) - offset;
                 key ^= Zobrist::psq[make_piece(c, pt)][square];
             }
             
