@@ -151,6 +151,7 @@ class Position {
     Key key_after(Move m) const;
     Key material_key() const;
     Key pawn_key() const;
+    Key pattern_key(Square sq) const;
 
     // Other properties of the position
     Color side_to_move() const;
