@@ -490,6 +490,7 @@ void Search::Worker::clear() {
     mainHistory.fill(0);
     captureHistory.fill(-700);
     pawnHistory.fill(-1188);
+    patternHistory.fill(0);
     pawnCorrectionHistory.fill(0);
     materialCorrectionHistory.fill(0);
 
@@ -913,7 +914,7 @@ moves_loop:  // When in check, search starts here
 
 
     MovePicker mp(pos, ttData.move, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory);
+                  contHist, &thisThread->pawnHistory,  &thisThread->patternHistory);
 
     value = bestValue;
 
@@ -1534,7 +1535,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     // the moves. We presently use two stages of move generator in quiescence search:
     // captures, or evasions only when in check.
     MovePicker mp(pos, ttData.move, DEPTH_QS, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory);
+                  contHist, &thisThread->pawnHistory, &thisThread->patternHistory);
 
     // Step 5. Loop through all pseudo-legal moves until no moves remain or a beta
     // cutoff occurs.
@@ -1813,6 +1814,7 @@ void update_quiet_histories(
 
     Color us = pos.side_to_move();
     workerThread.mainHistory[us][move.from_to()] << bonus;
+    workerThread.patternHistory[pattern_index(pos, move.to_sq())][pos.moved_piece(move)] << bonus;
 
     update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus);
 

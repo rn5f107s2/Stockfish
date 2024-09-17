@@ -37,6 +37,7 @@ namespace Stockfish {
 constexpr int PAWN_HISTORY_SIZE                = 512;    // has to be a power of 2
 constexpr int PAWN_CORRECTION_HISTORY_SIZE     = 16384;  // has to be a power of 2
 constexpr int MATERIAL_CORRECTION_HISTORY_SIZE = 32768;  // has to be a power of 2
+constexpr int PATTERN_HISTORY_SIZE             = 16384;  // has to be a power of 2
 constexpr int CORRECTION_HISTORY_LIMIT         = 1024;
 
 static_assert((PAWN_HISTORY_SIZE & (PAWN_HISTORY_SIZE - 1)) == 0,
@@ -57,6 +58,10 @@ inline int pawn_structure_index(const Position& pos) {
 
 inline int material_index(const Position& pos) {
     return pos.material_key() & (MATERIAL_CORRECTION_HISTORY_SIZE - 1);
+}
+
+inline int pattern_index(const Position& pos, Square s) {
+    return pos.pattern_key(s) & (PATTERN_HISTORY_SIZE - 1);
 }
 
 // StatsEntry stores the stat table value. It is usually a number but could
@@ -138,6 +143,8 @@ using ContinuationHistory = Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB>
 // PawnHistory is addressed by the pawn structure and a move's [piece][to]
 using PawnHistory = Stats<int16_t, 8192, PAWN_HISTORY_SIZE, PIECE_NB, SQUARE_NB>;
 
+// PatternHistory is addressed by the piece structure around the to square and the piece moving there
+using PatternHistory = Stats<int16_t, 8192, PATTERN_HISTORY_SIZE, PIECE_NB>;
 
 // Correction histories record differences between the static evaluation of
 // positions and their search score. It is used to improve the static evaluation
@@ -173,7 +180,8 @@ class MovePicker {
                const ButterflyHistory*,
                const CapturePieceToHistory*,
                const PieceToHistory**,
-               const PawnHistory*);
+               const PawnHistory*,
+               const PatternHistory*);
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
     Move next_move(bool skipQuiets = false);
 
@@ -190,6 +198,7 @@ class MovePicker {
     const CapturePieceToHistory* captureHistory;
     const PieceToHistory**       continuationHistory;
     const PawnHistory*           pawnHistory;
+    const PatternHistory*        patternHistory;
     Move                         ttMove;
     ExtMove *                    cur, *endMoves, *endBadCaptures, *beginBadQuiets, *endBadQuiets;
     int                          stage;
