@@ -274,7 +274,8 @@ void Search::Worker::iterative_deepening() {
     int searchAgainCounter = 0;
 
     rootHistory.fill(0);
-
+    preQsPvLength = 0;
+    
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (++rootDepth < MAX_PLY && !threads.stop
            && !(limits.depth && mainThread && rootDepth > limits.depth))
@@ -329,6 +330,7 @@ void Search::Worker::iterative_deepening() {
                 Depth adjustedDepth =
                   std::max(1, rootDepth - failedHighCnt - 3 * (searchAgainCounter + 1) / 4);
                 rootDelta = beta - alpha;
+                preQsPvLength = 0;
                 bestValue = search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
 
                 // Bring the best move to the front. It is critical that sorting
@@ -1228,6 +1230,9 @@ moves_loop:  // When in check, search starts here
             if (move == ttData.move && ss->ply <= thisThread->rootDepth * 2)
                 newDepth = std::max(newDepth, 1);
 
+            if (PvNode && depth <= 3 && ss->ply + (newDepth * 3 / 2) < preQsPvLength)
+                newDepth++;
+
             value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
         }
 
@@ -1385,8 +1390,12 @@ moves_loop:  // When in check, search starts here
     else if (ttData.move && !allNode)
         thisThread->mainHistory[us][ttData.move.from_to()] << stat_bonus(depth) / 4;
 
-    if (PvNode)
+    if (PvNode) {
         bestValue = std::min(bestValue, maxValue);
+
+        if (bestMove && bestValue < beta)
+            preQsPvLength = std::max(preQsPvLength, ss->ply);
+    }
 
     // If no good move is found and the previous position was ttPv, then the previous
     // opponent move is probably good and the new position is added to the search tree. (~7 Elo)
