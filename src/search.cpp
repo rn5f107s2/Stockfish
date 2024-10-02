@@ -323,6 +323,8 @@ void Search::Worker::iterative_deepening() {
             // high/low, re-search with a bigger window until we don't fail
             // high/low anymore.
             int failedHighCnt = 0;
+            int initalPreQsPvLength = std::min(preQsPvLength, rootDepth + 3);
+
             while (true)
             {
                 // Adjust the effective depth searched, but ensure at least one
@@ -330,7 +332,7 @@ void Search::Worker::iterative_deepening() {
                 Depth adjustedDepth =
                   std::max(1, rootDepth - failedHighCnt - 3 * (searchAgainCounter + 1) / 4);
                 rootDelta = beta - alpha;
-                preQsPvLength = 0;
+                preQsPvLength = initalPreQsPvLength;
                 bestValue = search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
 
                 // Bring the best move to the front. It is critical that sorting
