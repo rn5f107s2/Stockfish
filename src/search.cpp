@@ -996,7 +996,7 @@ moves_loop:  // When in check, search starts here
                 mp.skip_quiet_moves();
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r / 1024;
+            int lmrDepth = newDepth - (r + (ss-1)->fractionalReductions) / 1024;
 
             if (capture || givesCheck)
             {
@@ -1185,8 +1185,6 @@ moves_loop:  // When in check, search starts here
         r -= ss->statScore * 1287 / 16384;
 
         ss->fractionalReductions = r % 1024;
-
-        r += (ss->fractionalReductions + (ss-1)->fractionalReductions) / 1536;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         if (depth >= 2 && moveCount > 1)
