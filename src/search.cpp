@@ -575,7 +575,7 @@ Value Search::Worker::search(
     ss->inCheck        = pos.checkers();
     priorCapture       = pos.captured_piece();
     Color us           = pos.side_to_move();
-    ss->moveCount      = 0;
+    ss->moveCount      = ss->fractionalReductions = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
 
@@ -1183,6 +1183,10 @@ moves_loop:  // When in check, search starts here
 
         // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
         r -= ss->statScore * 1287 / 16384;
+
+        ss->fractionalReductions = r % 1024;
+
+        r += (ss->fractionalReductions + (ss-1)->fractionalReductions) / 1536;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         if (depth >= 2 && moveCount > 1)
