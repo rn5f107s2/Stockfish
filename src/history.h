@@ -36,6 +36,7 @@ constexpr int PAWN_HISTORY_SIZE        = 512;    // has to be a power of 2
 constexpr int CORRECTION_HISTORY_SIZE  = 32768;  // has to be a power of 2
 constexpr int CORRECTION_HISTORY_LIMIT = 1024;
 constexpr int LOW_PLY_HISTORY_SIZE     = 4;
+constexpr int PATTERN_HISTORY_SIZE     = 16384;
 
 static_assert((PAWN_HISTORY_SIZE & (PAWN_HISTORY_SIZE - 1)) == 0,
               "PAWN_HISTORY_SIZE has to be a power of 2");
@@ -64,6 +65,10 @@ inline int minor_piece_index(const Position& pos) {
 template<Color c>
 inline int non_pawn_index(const Position& pos) {
     return pos.non_pawn_key(c) & (CORRECTION_HISTORY_SIZE - 1);
+}
+
+inline int pattern_key(const Position &pos, Square s) {
+    return pos.pattern_key(s) & (PATTERN_HISTORY_SIZE - 1);
 }
 
 // StatsEntry stores the stat table value. It is usually a number but could
@@ -148,6 +153,8 @@ using ContinuationHistory = Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB>
 
 // PawnHistory is addressed by the pawn structure and a move's [piece][to]
 using PawnHistory = Stats<int16_t, 8192, PAWN_HISTORY_SIZE, PIECE_NB, SQUARE_NB>;
+
+using PatternHistory = Stats<int16_t, 16384, PIECE_NB, PATTERN_HISTORY_SIZE>;
 
 // Correction histories record differences between the static evaluation of
 // positions and their search score. It is used to improve the static evaluation

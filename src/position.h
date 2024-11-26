@@ -46,6 +46,7 @@ struct StateInfo {
     Key    majorPieceKey;
     Key    minorPieceKey;
     Key    nonPawnKey[COLOR_NB];
+    Key    patternKey[SQUARE_NB];
     Value  nonPawnMaterial[COLOR_NB];
     int    castlingRights;
     int    rule50;
@@ -157,6 +158,7 @@ class Position {
     Key major_piece_key() const;
     Key minor_piece_key() const;
     Key non_pawn_key(Color c) const;
+    Key pattern_key(Square s) const;
 
     // Other properties of the position
     Color side_to_move() const;
@@ -191,6 +193,7 @@ class Position {
     void do_castling(Color us, Square from, Square& to, Square& rfrom, Square& rto);
     template<bool AfterMove>
     Key adjust_key50(Key k) const;
+    void adjust_pattern_key(Piece pc, Square s) const;
 
     // Data members
     Piece      board[SQUARE_NB];
@@ -309,6 +312,8 @@ inline Key Position::major_piece_key() const { return st->majorPieceKey; }
 inline Key Position::minor_piece_key() const { return st->minorPieceKey; }
 
 inline Key Position::non_pawn_key(Color c) const { return st->nonPawnKey[c]; }
+
+inline Key Position::pattern_key(Square s) const  { return st->patternKey[s]; }
 
 inline Value Position::non_pawn_material(Color c) const { return st->nonPawnMaterial[c]; }
 

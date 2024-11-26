@@ -293,6 +293,9 @@ constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d
 inline Square&   operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square&   operator-=(Square& s, Direction d) { return s = s - d; }
 
+constexpr File operator+(File f, int i) { return File(int(f) + i); }
+constexpr Rank operator+(Rank r, int i) { return Rank(int(r) + i); }
+
 // Toggle color
 constexpr Color operator~(Color c) { return Color(c ^ BLACK); }
 

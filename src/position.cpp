@@ -341,6 +341,9 @@ void Position::set_state() const {
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
     st->checkersBB = attackers_to(square<KING>(sideToMove)) & pieces(~sideToMove);
 
+    for (Square s = SQ_A1; s < SQ_NONE; ++s)
+        st->patternKey[s] = 0;
+
     set_check_info();
 
     for (Bitboard b = pieces(); b;)
@@ -348,6 +351,7 @@ void Position::set_state() const {
         Square s  = pop_lsb(b);
         Piece  pc = piece_on(s);
         st->key ^= Zobrist::psq[pc][s];
+        adjust_pattern_key(pc, s);
 
         if (type_of(pc) == PAWN)
             st->pawnKey ^= Zobrist::psq[pc][s];
@@ -730,6 +734,10 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
         k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         st->majorPieceKey ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         st->nonPawnKey[us] ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+
+        adjust_pattern_key(pc, rfrom);
+        adjust_pattern_key(captured, rto);
+
         captured = NO_PIECE;
     }
 
@@ -776,6 +784,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 
         k ^= Zobrist::psq[captured][capsq];
         st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
+        adjust_pattern_key(captured, capsq);
 
         // Reset rule 50 counter
         st->rule50 = 0;
@@ -783,6 +792,8 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 
     // Update hash key
     k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+    adjust_pattern_key(pc, from);
+    adjust_pattern_key(pc, to);
 
     // Reset en passant square
     if (st->epSquare != SQ_NONE)
@@ -843,6 +854,8 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
             st->pawnKey ^= Zobrist::psq[pc][to];
             st->materialKey ^=
               Zobrist::psq[promotion][pieceCount[promotion] - 1] ^ Zobrist::psq[pc][pieceCount[pc]];
+            adjust_pattern_key(pc, to);
+            adjust_pattern_key(promotion, to);
 
             if (promotionType == QUEEN || promotionType == ROOK)
                 st->majorPieceKey ^= Zobrist::psq[promotion][to];
@@ -1345,6 +1358,23 @@ bool Position::pos_is_ok() const {
         }
 
     return true;
+}
+
+inline void Position::adjust_pattern_key(Piece pc, Square s) const {
+    File file = file_of(s);
+    Rank rank = rank_of(s);
+
+    for (int i = -1; i < 2; i++) {
+        for (int j = -1; j < 2; j++) {
+            Square adjustedSquare = make_square(file + i, rank + j);
+
+            if (!is_ok(adjustedSquare))
+                continue;
+
+            Square relativeSquare = make_square(File(i + 1), Rank(j + 1));
+            st->patternKey[adjustedSquare] ^= Zobrist::psq[pc][relativeSquare];
+        }
+    }
 }
 
 }  // namespace Stockfish
