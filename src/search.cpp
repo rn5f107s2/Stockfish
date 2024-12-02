@@ -432,7 +432,11 @@ void Search::Worker::iterative_deepening() {
             
                 Value score = thread->worker->lastGoodValue;
                 Depth depth = thread->worker->completedDepth;
-                Move  move  = thread->worker->rootMoves[0].pv[0];
+                auto moves = thread->worker->rootMoves[0].pv;
+                Move move = moves.size() ? moves[0] : Move::none();
+
+                if (!move)
+                    continue;
 
                 int depthDiff = bestDepth - depth;
 
@@ -997,7 +1001,6 @@ moves_loop:  // When in check, search starts here
             RootMove& rm =
               *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
             rm.score = -VALUE_INFINITE;
-            rm.scoreLowerbound = true;
             continue;
         }
 
