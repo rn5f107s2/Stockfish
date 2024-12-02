@@ -395,8 +395,10 @@ void Search::Worker::iterative_deepening() {
                 break;
         }
 
-        if (!threads.stop)
+        if (!threads.stop) {
             completedDepth = rootDepth;
+            lastGoodValue = bestValue;
+        }
 
         // We make sure not to pick an unproven mated-in score,
         // in case this thread prematurely stopped search (aborted-search).
@@ -414,6 +416,38 @@ void Search::Worker::iterative_deepening() {
             lastBestPV        = rootMoves[0].pv;
             lastBestScore     = rootMoves[0].score;
             lastBestMoveDepth = rootDepth;
+        }
+
+        if (   threadIdx % 8 == 7
+            && this->completedDepth > 10)
+        {
+            Value bestScore = -VALUE_INFINITE;
+            Depth bestDepth = DEPTH_UNSEARCHED;
+            Move  bestMove  = Move::none();
+
+            for (auto&& thread : threads) 
+            {
+                if (thread->worker->completedDepth <= 10)
+                    continue;
+            
+                Value score = thread->worker->lastGoodValue;
+                Depth depth = thread->worker->completedDepth;
+                Move  move  = thread->worker->rootMoves[0].pv[0];
+
+                int depthDiff = bestDepth - depth;
+
+                if (thread->id() % 8 == 7)
+                    depthDiff = std::min(depthDiff, 0);
+
+                if (bestScore >= score - (depthDiff * std::abs(depthDiff) * 7))
+                    continue;
+
+                bestScore = score;
+                bestDepth = depth;
+                bestMove = move;    
+            }
+
+            this->expertMove = bestMove;
         }
 
         if (!mainThread)
@@ -955,6 +989,17 @@ moves_loop:  // When in check, search starts here
 
         if (move == excludedMove)
             continue;
+
+        if (   rootNode
+            && thisThread->expertMove
+            && thisThread->expertMove != move)
+        {
+            RootMove& rm =
+              *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+            rm.score = -VALUE_INFINITE;
+            rm.scoreLowerbound = true;
+            continue;
+        }
 
         // Check for legality
         if (!pos.legal(move))

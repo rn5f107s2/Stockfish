@@ -292,6 +292,10 @@ class Worker {
     CorrectionHistory<NonPawn>      nonPawnCorrectionHistory[COLOR_NB];
     CorrectionHistory<Continuation> continuationCorrectionHistory;
 
+    Value lastGoodValue;
+    Depth completedDepth;
+    RootMoves rootMoves;
+
    private:
     void iterative_deepening();
 
@@ -324,9 +328,9 @@ class Worker {
 
     Position  rootPos;
     StateInfo rootState;
-    RootMoves rootMoves;
-    Depth     rootDepth, completedDepth;
+    Depth     rootDepth;
     Value     rootDelta;
+    Move      expertMove;
 
     size_t                    threadIdx;
     NumaReplicatedAccessToken numaAccessToken;
