@@ -81,7 +81,7 @@ class TranspositionTable {
     uint8_t generation() const;  // The current age, used when writing new data to the TT
     std::tuple<bool, TTData, TTWriter>
     probe(const Key key) const;  // The main method, whose retvals separate local vs global objects
-    TTEntry* first_entry(const Key key)
+    Cluster* get_cluster(const Key key)
       const;  // This is the hash function; its only external use is memory prefetching.
 
    private:

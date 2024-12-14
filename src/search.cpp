@@ -561,7 +561,7 @@ Value Search::Worker::search(
     ASSERT_ALIGNED(&st, Eval::NNUE::CacheLineSize);
 
     Key   posKey;
-    Move  move, excludedMove, bestMove;
+    Move  move, excludedMove, bestMove, potentialTTMove;
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
@@ -623,6 +623,8 @@ Value Search::Worker::search(
     auto [ttHit, ttData, ttWriter] = tt.probe(posKey);
     // Need further processing of the saved data
     ss->ttHit    = ttHit;
+    potentialTTMove = !ttHit && ttData.move && ttData.move.type_of() == NORMAL ? ttData.move
+                                                                               : Move::none();
     ttData.move  = rootNode ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
                  : ttHit    ? ttData.move
                             : Move::none();
@@ -886,7 +888,7 @@ Value Search::Worker::search(
 
 
             // Prefetch the TT entry for the resulting position
-            prefetch(tt.first_entry(pos.key_after(move)));
+            prefetch(tt.get_cluster(pos.key_after(move)));
 
             ss->currentMove = move;
             ss->continuationHistory =
@@ -937,7 +939,7 @@ moves_loop:  // When in check, search starts here
                                         (ss - 6)->continuationHistory};
 
 
-    MovePicker mp(pos, ttData.move, depth, &thisThread->mainHistory, &thisThread->lowPlyHistory,
+    MovePicker mp(pos, ttHit ? ttData.move : potentialTTMove, depth, &thisThread->mainHistory, &thisThread->lowPlyHistory,
                   &thisThread->captureHistory, contHist, &thisThread->pawnHistory, ss->ply);
 
     value = bestValue;
@@ -1132,7 +1134,7 @@ moves_loop:  // When in check, search starts here
         newDepth += extension;
 
         // Speculative prefetch as early as possible
-        prefetch(tt.first_entry(pos.key_after(move)));
+        prefetch(tt.get_cluster(pos.key_after(move)));
 
         // Update the current move (this must be done after singular extension search)
         ss->currentMove = move;
@@ -1650,7 +1652,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         }
 
         // Speculative prefetch as early as possible
-        prefetch(tt.first_entry(pos.key_after(move)));
+        prefetch(tt.get_cluster(pos.key_after(move)));
 
         // Update the current move
         ss->currentMove = move;

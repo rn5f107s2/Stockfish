@@ -141,7 +141,7 @@ static constexpr int ClusterSize = 3;
 
 struct Cluster {
     TTEntry entry[ClusterSize];
-    char    padding[2];  // Pad to 32 bytes
+    int16_t padding;  // Pad to 32 bytes
 };
 
 static_assert(sizeof(Cluster) == 32, "Suboptimal Cluster size");
@@ -221,8 +221,8 @@ uint8_t TranspositionTable::generation() const { return generation8; }
 // minus 8 times its relative age. TTEntry t1 is considered more valuable than
 // TTEntry t2 if its replace value is greater than that of t2.
 std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) const {
-
-    TTEntry* const tte   = first_entry(key);
+    Cluster* cluster     = get_cluster(key);
+    TTEntry* const tte   = &cluster->entry[0];
     const uint16_t key16 = uint16_t(key);  // Use the low 16 bits as key inside the cluster
 
     for (int i = 0; i < ClusterSize; ++i)
@@ -238,12 +238,17 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
             > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
             replace = &tte[i];
 
-    return {false, TTData(), TTWriter(replace)};
+    Move storedMove = Move(cluster->padding ^ key16);
+
+    if (replace->move16.type_of() == NORMAL)
+        cluster->padding = replace->move16.raw() ^ replace->key16;
+
+    return {false, TTData({storedMove, VALUE_NONE, VALUE_NONE, DEPTH_UNSEARCHED, BOUND_NONE, false}), TTWriter(replace)};
 }
 
 
-TTEntry* TranspositionTable::first_entry(const Key key) const {
-    return &table[mul_hi64(key, clusterCount)].entry[0];
+Cluster* TranspositionTable::get_cluster(const Key key) const {
+    return &table[mul_hi64(key, clusterCount)];
 }
 
 }  // namespace Stockfish
