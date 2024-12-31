@@ -168,16 +168,18 @@ void MovePicker::score() {
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
             // bonus for escaping from capture
-            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51700
+            m.threatenedAdjustment = threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51700
                                                   : pt == ROOK && !(to & threatenedByMinor) ? 25600
                                                   : !(to & threatenedByPawn)                ? 14450
                                                                                             : 0)
                                                : 0;
 
             // malus for putting piece en prise
-            m.value -= (pt == QUEEN ? bool(to & threatenedByRook) * 49000
+            m.threatenedAdjustment -= (pt == QUEEN ? bool(to & threatenedByRook) * 49000
                         : pt == ROOK && bool(to & threatenedByMinor) ? 24335
                                                                      : 0);
+
+            m.value += m.threatenedAdjustment;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);
@@ -210,9 +212,12 @@ Move MovePicker::select(Pred filter) {
 // This is the most important method of the MovePicker class. We emit one
 // new pseudo-legal move on every call until there are no more moves left,
 // picking the move with the highest score from a list of generated moves.
-Move MovePicker::next_move() {
+Move MovePicker::next_move(int* threatenedAdjustment) {
 
     auto quiet_threshold = [](Depth d) { return -3560 * d; };
+
+    if (threatenedAdjustment)
+        *threatenedAdjustment = 0;
 
 top:
     switch (stage)
@@ -263,8 +268,12 @@ top:
     case GOOD_QUIET :
         if (!skipQuiets && select([]() { return true; }))
         {
-            if ((cur - 1)->value > -7998 || (cur - 1)->value <= quiet_threshold(depth))
+            if ((cur - 1)->value > -7998 || (cur - 1)->value <= quiet_threshold(depth)) {
+                if (threatenedAdjustment)
+                    *threatenedAdjustment = (cur - 1)->threatenedAdjustment;
+
                 return *(cur - 1);
+            }
 
             // Remaining quiets are bad
             beginBadQuiets = cur - 1;
@@ -289,8 +298,12 @@ top:
         [[fallthrough]];
 
     case BAD_QUIET :
-        if (!skipQuiets)
-            return select([]() { return true; });
+        if (!skipQuiets && select([]() { return true; })) {
+            if (threatenedAdjustment)
+                *threatenedAdjustment = (cur - 1)->threatenedAdjustment;
+
+            return *(cur - 1);
+        }
 
         return Move::none();
 
