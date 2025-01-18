@@ -569,11 +569,11 @@ Value Search::Worker::search(
     ASSERT_ALIGNED(&st, Eval::NNUE::CacheLineSize);
 
     Key   posKey;
-    Move  move, excludedMove, bestMove;
+    Move  move, excludedMove, bestMove, priorityMove;
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture;
+    bool  capture, ttCapture, singularPriorityMove;
     int   priorReduction = ss->reduction;
     ss->reduction        = 0;
     Piece movedPiece;
@@ -620,7 +620,7 @@ Value Search::Worker::search(
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
-    bestMove            = Move::none();
+    bestMove            = priorityMove = Move::none();
     (ss + 2)->cutoffCnt = 0;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
@@ -850,6 +850,24 @@ Value Search::Worker::search(
     if ((PvNode || (cutNode && depth >= 7)) && !ttData.move)
         depth -= 2;
 
+    if (PvNode && depth >= 4 && ss->staticEval < beta && !ttData.move) {
+        value = qsearch<PV>(pos, ss, alpha, beta);
+
+        if (value >= beta) {
+            Value singularBeta = value - 2 * depth;
+            priorityMove = ss->currentMove;
+
+            ss->excludedMove = priorityMove;
+            value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, (depth + 1) / 2, cutNode);
+            ss->excludedMove = Move::none();
+
+            if (value < singularBeta)
+                singularPriorityMove = true;
+            else
+                priorityMove = ss->currentMove;
+        }
+    }
+
     // Use qsearch if depth <= 0
     if (depth <= 0)
         return qsearch<PV>(pos, ss, alpha, beta);
@@ -929,7 +947,7 @@ moves_loop:  // When in check, search starts here
       (ss - 4)->continuationHistory, (ss - 5)->continuationHistory, (ss - 6)->continuationHistory};
 
 
-    MovePicker mp(pos, ttData.move, depth, &thisThread->mainHistory, &thisThread->lowPlyHistory,
+    MovePicker mp(pos, ttData.move ? ttData.move : priorityMove, depth, &thisThread->mainHistory, &thisThread->lowPlyHistory,
                   &thisThread->captureHistory, contHist, &thisThread->pawnHistory, ss->ply);
 
     value = bestValue;
@@ -1126,6 +1144,9 @@ moves_loop:  // When in check, search starts here
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4126)
+                extension = 1;
+
+            else if (move == priorityMove && singularPriorityMove)
                 extension = 1;
         }
 
