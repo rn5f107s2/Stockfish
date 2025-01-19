@@ -575,6 +575,7 @@ Value Search::Worker::search(
     bool  givesCheck, improving, priorCapture, opponentWorsening;
     bool  capture, ttCapture;
     int   priorReduction = ss->reduction;
+    int   consecutiveNullCounters;
     ss->reduction        = 0;
     Piece movedPiece;
 
@@ -586,7 +587,7 @@ Value Search::Worker::search(
     ss->inCheck        = pos.checkers();
     priorCapture       = pos.captured_piece();
     Color us           = pos.side_to_move();
-    ss->moveCount      = 0;
+    ss->moveCount      = consecutiveNullCounters = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
 
@@ -988,7 +989,7 @@ moves_loop:  // When in check, search starts here
         if (!rootNode && pos.non_pawn_material(us) && !is_loss(bestValue))
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-            if (moveCount >= futility_move_count(improving, depth))
+            if (moveCount >= futility_move_count(improving, depth) - std::min(consecutiveNullCounters, 5))
                 mp.skip_quiet_moves();
 
             // Reduced depth of the next LMR search
@@ -1129,6 +1130,8 @@ moves_loop:  // When in check, search starts here
                 extension = 1;
         }
 
+        (ss+1)->currentMove = Move::none();
+
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck, &tt);
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
@@ -1205,6 +1208,8 @@ moves_loop:  // When in check, search starts here
 
             value               = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
             (ss + 1)->reduction = 0;
+
+            consecutiveNullCounters = (ss+1)->currentMove == Move::null() ? consecutiveNullCounters + 1 : 0;
 
 
             // Do a full-depth search when reduced LMR search fails high
