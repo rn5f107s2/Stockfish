@@ -509,6 +509,27 @@ void Search::Worker::iterative_deepening() {
                              skill.best ? skill.best : skill.pick_best(rootMoves, multiPV)));
 }
 
+int CAP_FP_BASE = 271;
+int CAP_FP_MULT = 243;
+int CAP_FP_DEPTH = 6145;
+int HIST_ADD_DIV = 3459;
+int QUIET_FP_BASE_BM = 47;
+int QUIET_FP_BASE_NOBM = 137;
+int QUIET_FP_MULT = 142;
+int QUIET_FP_DEPTH = 11265;
+int QUIET_SEE_MARGIN = -25;
+int QUIET_SEE_DEPTH_MIN = 0;
+
+TUNE(SetRange(175, 350), CAP_FP_BASE, CAP_FP_MULT);
+TUNE(SetRange(75, 250), QUIET_FP_BASE_NOBM, QUIET_FP_MULT);
+TUNE(SetRange(-512, 512), QUIET_SEE_DEPTH_MIN);
+TUNE(SetRange(7000, 15000), QUIET_FP_DEPTH);
+TUNE(SetRange(3000, 9000), CAP_FP_DEPTH);
+TUNE(SetRange(-75, 0), QUIET_SEE_MARGIN);
+TUNE(SetRange(0, 100), QUIET_FP_BASE_BM);
+TUNE(SetRange(1500, 4750), HIST_ADD_DIV);
+
+
 // Reset histories, usually before a new game
 void Search::Worker::clear() {
     mainHistory.fill(63);
@@ -1001,7 +1022,7 @@ moves_loop:  // When in check, search starts here
                 // Futility pruning for captures
                 if (!givesCheck && lmrDepth < 6145 && !ss->inCheck)
                 {
-                    Value futilityValue = ss->staticEval + 271 + 243 * lmrDepth / 1024
+                    Value futilityValue = ss->staticEval + CAP_FP_BASE + CAP_FP_MULT * lmrDepth / 1024
                                         + PieceValue[capturedPiece] + captHist / 7;
                     if (futilityValue <= alpha)
                         continue;
@@ -1025,12 +1046,12 @@ moves_loop:  // When in check, search starts here
 
                 history += 2 * thisThread->mainHistory[us][move.from_to()];
 
-                lmrDepth += history * 1024 / 3459;
+                lmrDepth += history * 1024 / HIST_ADD_DIV;
 
-                Value futilityValue = ss->staticEval + (bestMove ? 47 : 137) + 142 * lmrDepth / 1024;
+                Value futilityValue = ss->staticEval + (bestMove ? QUIET_FP_BASE_BM : QUIET_FP_BASE_NOBM) + QUIET_FP_MULT * lmrDepth / 1024;
 
                 // Futility pruning: parent node
-                if (!ss->inCheck && lmrDepth < 11265 && futilityValue <= alpha)
+                if (!ss->inCheck && lmrDepth < QUIET_FP_DEPTH && futilityValue <= alpha)
                 {
                     if (bestValue <= futilityValue && !is_decisive(bestValue)
                         && !is_win(futilityValue))
@@ -1038,10 +1059,10 @@ moves_loop:  // When in check, search starts here
                     continue;
                 }
 
-                lmrDepth = std::max(lmrDepth, 0);
+                lmrDepth = std::max(lmrDepth, QUIET_SEE_DEPTH_MIN);
 
                 // Prune moves with negative SEE
-                if (!pos.see_ge(move, ((-25 * lmrDepth / 1024) * lmrDepth / 1024)))
+                if (!pos.see_ge(move, ((QUIET_SEE_MARGIN * lmrDepth / 1024) * lmrDepth / 1024)))
                     continue;
             }
         }
