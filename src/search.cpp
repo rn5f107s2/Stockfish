@@ -509,25 +509,16 @@ void Search::Worker::iterative_deepening() {
                              skill.best ? skill.best : skill.pick_best(rootMoves, multiPV)));
 }
 
-int CAP_FP_BASE = 271;
-int CAP_FP_MULT = 243;
-int CAP_FP_DEPTH = 6145;
-int HIST_ADD_DIV = 3459;
-int QUIET_FP_BASE_BM = 47;
-int QUIET_FP_BASE_NOBM = 137;
-int QUIET_FP_MULT = 142;
-int QUIET_FP_DEPTH = 11265;
-int QUIET_SEE_MARGIN = -25;
-int QUIET_SEE_DEPTH_MIN = 0;
-
-TUNE(SetRange(175, 350), CAP_FP_BASE, CAP_FP_MULT);
-TUNE(SetRange(75, 250), QUIET_FP_BASE_NOBM, QUIET_FP_MULT);
-TUNE(SetRange(-512, 512), QUIET_SEE_DEPTH_MIN);
-TUNE(SetRange(7000, 15000), QUIET_FP_DEPTH);
-TUNE(SetRange(3000, 9000), CAP_FP_DEPTH);
-TUNE(SetRange(-75, 0), QUIET_SEE_MARGIN);
-TUNE(SetRange(0, 100), QUIET_FP_BASE_BM);
-TUNE(SetRange(1500, 4750), HIST_ADD_DIV);
+int CAP_FP_BASE = 280;
+int CAP_FP_MULT = 240;
+int CAP_FP_DEPTH = 6132;
+int HIST_ADD_DIV = 3803;
+int QUIET_FP_BASE_BM = 45;
+int QUIET_FP_BASE_NOBM = 144;
+int QUIET_FP_MULT = 135;
+int QUIET_FP_DEPTH = 11302;
+int QUIET_SEE_MARGIN = -28;
+int QUIET_SEE_DEPTH_MIN = 3;
 
 
 // Reset histories, usually before a new game
