@@ -305,7 +305,8 @@ top:
 
     case EVASION :
     case QCAPTURE :
-        return select([]() { return true; });
+        return select([&]() { return !skipQuiets || pos.gives_check(*cur) || pos.capture_stage(*cur); });
+
 
     case PROBCUT :
         return select([&]() { return pos.see_ge(*cur, threshold); });
