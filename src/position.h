@@ -164,6 +164,7 @@ class Position {
     bool  is_repetition(int ply) const;
     bool  upcoming_repetition(int ply) const;
     bool  has_repeated() const;
+    bool  simple_stalemate() const;
     int   rule50_count() const;
     Value non_pawn_material(Color c) const;
     Value non_pawn_material() const;

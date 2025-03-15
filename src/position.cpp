@@ -1159,7 +1159,7 @@ bool Position::see_ge(Move m, int threshold) const {
 }
 
 // Tests whether the position is drawn by 50-move rule
-// or by repetition. It does not detect stalemates.
+// or by repetition. It does not detect all stalemates.
 bool Position::is_draw(int ply) const {
 
     if (st->rule50 > 99 && (!checkers() || MoveList<LEGAL>(*this).size()))
@@ -1187,6 +1187,72 @@ bool Position::has_repeated() const {
     }
     return false;
 }
+
+// Cheks whether a position is a simple to check for stalemate.
+// All stalemates detected by this function are stalemates, however not as stalemate
+// detected positions may be stalemate.
+bool Position::simple_stalemate() const {
+    Color us = side_to_move();
+
+    Square ksq = square<KING>(us);
+
+    Direction up     = pawn_push(us);
+    Direction upWest = up + WEST;
+    Direction upEast = up + EAST;
+
+    Bitboard pawns           = pieces(us, PAWN  );
+    Bitboard knights         = pieces(us, KNIGHT);
+    Bitboard diagonalSliders = pieces(us, BISHOP) | pieces(us, QUEEN);
+    Bitboard straightSilders = pieces(us, ROOK  ) | pieces(us, QUEEN);
+    Bitboard upWestDiag      = is_ok(ksq + upWest) ? line_bb(ksq, ksq + upWest) : 0;
+    Bitboard upEastDiag      = is_ok(ksq + upEast) ? line_bb(ksq, ksq + upEast) : 0;
+
+    // If we are in check, we are not in stalemate
+    if (checkers())
+        return false;
+
+    // If there is an ep square, assume we are not in stalemate
+    if (ep_square() != SQ_NONE)
+        return false;
+
+    // If we have a high mobility piece (non king non pawn)
+    // that is not pinned, assume we are not in stalemate.
+    if ((knights | diagonalSliders | straightSilders) & ~blockers_for_king(us))
+        return false;
+
+    // If a diagonal slider is pinned along a diagonal, it can still move
+    if (diagonalSliders & PseudoAttacks[BISHOP][ksq])
+        return false;
+
+    // Same for straight sliders
+    if (straightSilders & PseudoAttacks[ROOK][ksq])
+        return false;
+
+    // If a non pinned pawn, or a pawn that is pinned along a file, can move upwards, we are not in stalemate
+    if (shift(pawns & (~blockers_for_king(us) | file_bb(ksq)), up) & ~pieces())
+        return false;
+
+
+    // If a non pinned pawn, or a pawn pinned along the diagonal the capture is happening, can capture, we are not in stalemate
+    if (   shift(pawns & (~blockers_for_king(us) | upWestDiag), upWest) & pieces()
+        || shift(pawns & (~blockers_for_king(us) | upEastDiag), upEast) & pieces())
+        return false;
+
+    Bitboard threatened =   attacks_by<PAWN  >(~us) 
+                          | attacks_by<KNIGHT>(~us) 
+                          | attacks_by<BISHOP>(~us) 
+                          | attacks_by<ROOK  >(~us) 
+                          | attacks_by<QUEEN >(~us)
+                          | attacks_by<KING  >(~us);
+
+    
+    // If there are no threatened, not occupied by us squares next to our king, we are not in stalemate
+    if (PseudoAttacks[KING][ksq] & ~pieces(us) & ~threatened)
+        return false;
+    
+    return true;
+}
+
 
 
 // Tests if the position has a move which draws by repetition.

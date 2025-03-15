@@ -129,6 +129,19 @@ constexpr Bitboard file_bb(File f) { return FileABB << f; }
 
 constexpr Bitboard file_bb(Square s) { return file_bb(file_of(s)); }
 
+constexpr Bitboard shift(Bitboard b, Direction d) {
+    return d == NORTH         ? b << 8
+         : d == SOUTH         ? b >> 8
+         : d == NORTH + NORTH ? b << 16
+         : d == SOUTH + SOUTH ? b >> 16
+         : d == EAST          ? (b & ~FileHBB) << 1
+         : d == WEST          ? (b & ~FileABB) >> 1
+         : d == NORTH_EAST    ? (b & ~FileHBB) << 9
+         : d == NORTH_WEST    ? (b & ~FileABB) << 7
+         : d == SOUTH_EAST    ? (b & ~FileHBB) >> 7
+         : d == SOUTH_WEST    ? (b & ~FileABB) >> 9
+                         : 0;
+}
 
 // Moves a bitboard one or two steps as specified by the direction D
 template<Direction D>

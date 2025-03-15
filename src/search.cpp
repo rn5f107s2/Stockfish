@@ -648,7 +648,7 @@ Value Search::Worker::search(
     if (!rootNode)
     {
         // Step 2. Check for aborted search and immediate draw
-        if (threads.stop.load(std::memory_order_relaxed) || pos.is_draw(ss->ply)
+        if (threads.stop.load(std::memory_order_relaxed) || pos.is_draw(ss->ply) || pos.simple_stalemate()
             || ss->ply >= MAX_PLY)
             return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos)
                                                         : value_draw(thisThread->nodes);
