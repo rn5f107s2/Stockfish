@@ -51,6 +51,7 @@ class MovePicker {
     Move next_move();
     void skip_quiet_moves();
     bool can_move_king_or_pawn();
+    void setTTM(Move newTTM);
 
    private:
     template<typename Pred>

@@ -329,4 +329,8 @@ bool MovePicker::can_move_king_or_pawn() {
     return false;
 }
 
+void MovePicker::setTTM(Move newTTM) {
+    ttMove = newTTM;
+}
+
 }  // namespace Stockfish

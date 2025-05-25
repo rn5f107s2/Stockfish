@@ -1129,7 +1129,7 @@ moves_loop:  // When in check, search starts here
         // (*Scaler) Generally, higher singularBeta (i.e closer to ttValue)
         // and lower extension margins scale well.
 
-        if (!rootNode && move == ttData.move && !excludedMove
+        if (!rootNode && move == ttData.move && !excludedMove && moveCount == 1
             && depth >= 6 - (thisThread->completedDepth > 27) + ss->ttPv && is_valid(ttData.value)
             && !is_decisive(ttData.value) && (ttData.bound & BOUND_LOWER)
             && ttData.depth >= depth - 3)
@@ -1137,6 +1137,7 @@ moves_loop:  // When in check, search starts here
             Value singularBeta  = ttData.value - (58 + 76 * (ss->ttPv && !PvNode)) * depth / 57;
             Depth singularDepth = newDepth / 2;
 
+            ss->currentMove  = Move::none();
             ss->excludedMove = move;
             value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
             ss->excludedMove = Move::none();
@@ -1163,8 +1164,21 @@ moves_loop:  // When in check, search starts here
             // over the original beta, we assume this expected cut-node is not
             // singular (multiple moves fail high), and we can prune the whole
             // subtree by returning a softbound.
-            else if (value >= beta && !is_decisive(value))
-                return value;
+            else if (value >= beta) {
+                if (   !is_decisive(value)
+                    && (   ttData.value > alpha
+                        || ttData.bound != BOUND_LOWER
+                        || !ss->currentMove))
+                    return value;
+
+                mp.setTTM(ss->currentMove);
+
+                move = ss->currentMove;
+
+                capture    = pos.capture_stage(move);
+                givesCheck = pos.gives_check(move);
+                movedPiece = pos.moved_piece(move);
+            }
 
             // Negative extensions
             // If other moves failed high over (ttValue - margin) without the
