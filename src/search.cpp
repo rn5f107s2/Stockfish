@@ -1439,6 +1439,7 @@ moves_loop:  // When in check, search starts here
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 800 : -879);
     }
+    else if (excludedMove);
 
     // Bonus for prior quiet countermove that caused the fail low
     else if (!priorCapture && prevSq != SQ_NONE)
