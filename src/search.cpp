@@ -967,6 +967,19 @@ Value Search::Worker::search(
         }
     }
 
+    if (allNode && !ttHit && depth >= 8 && !excludedMove && ss->staticEval >= beta) {
+        ss->excludedMove = Move::null();
+        value = search<NonPV>(pos, ss, beta - 1, beta, depth - 5, false);
+        ss->excludedMove = Move::none();
+
+        std::tie(ttHit, ttData, ttWriter) = tt.probe(posKey);
+        ss->ttHit    = ttHit;
+        ttData.move  = ttHit ? ttData.move
+                             : Move::none();
+        ttData.value = ttHit ? value_from_tt(ttData.value, ss->ply, pos.rule50_count()) : VALUE_NONE;
+        ttCapture    = ttData.move && pos.capture_stage(ttData.move);
+    }
+
 moves_loop:  // When in check, search starts here
 
     // Step 12. A small Probcut idea
@@ -1484,7 +1497,7 @@ moves_loop:  // When in check, search starts here
 
     // Write gathered information in transposition table. Note that the
     // static evaluation is saved as it was before correction history.
-    if (!excludedMove && !(rootNode && thisThread->pvIdx))
+    if (!excludedMove.is_ok() && !(rootNode && thisThread->pvIdx))
         ttWriter.write(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv,
                        bestValue >= beta    ? BOUND_LOWER
                        : PvNode && bestMove ? BOUND_EXACT
