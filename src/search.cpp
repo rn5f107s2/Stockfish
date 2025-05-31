@@ -969,7 +969,7 @@ Value Search::Worker::search(
 
     if (allNode && !ttHit && depth >= 8 && !excludedMove && ss->staticEval >= beta) {
         ss->excludedMove = Move::null();
-        value = search<NonPV>(pos, ss, beta - 1, beta, depth - 5, false);
+        value = search<NonPV>(pos, ss, beta - 1, beta, depth - 3, false);
         ss->excludedMove = Move::none();
 
         std::tie(ttHit, ttData, ttWriter) = tt.probe(posKey);
