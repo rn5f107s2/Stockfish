@@ -831,8 +831,12 @@ Value Search::Worker::search(
 
     opponentWorsening = ss->staticEval > -(ss - 1)->staticEval;
 
-    if (priorReduction >= 3 && !opponentWorsening)
+
+    if (    priorReduction >= 3 
+        && !opponentWorsening
+        && (!priorCapture || qsearch<NonPV>(pos, ss, ss->staticEval + 100, ss->staticEval + 101) <= ss->staticEval + 100))
         depth++;
+
     if (priorReduction >= 1 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 175)
         depth--;
 
