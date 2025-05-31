@@ -967,7 +967,7 @@ Value Search::Worker::search(
         }
     }
 
-    if (allNode && !ttHit && depth >= 8 && !excludedMove && ss->staticEval >= beta) {
+    if (allNode && !ttHit && depth >= 3 && ss->staticEval >= beta) {
         ss->excludedMove = Move::null();
         value = search<NonPV>(pos, ss, beta - 1, beta, depth - 3, false);
         ss->excludedMove = Move::none();
