@@ -717,6 +717,8 @@ DirtyPiece Position::do_move(Move                      m,
     Piece  pc       = piece_on(from);
     Piece  captured = m.type_of() == EN_PASSANT ? make_piece(them, PAWN) : piece_on(to);
 
+    bool checkEP = false;
+
     DirtyPiece dp;
     dp.pc     = pc;
     dp.from   = from;
@@ -812,13 +814,9 @@ DirtyPiece Position::do_move(Move                      m,
     // If the moving piece is a pawn do some special extra work
     if (type_of(pc) == PAWN)
     {
-        // Set en passant square if the moved pawn can be captured
-        if ((int(to) ^ int(from)) == 16
-            && (attacks_bb<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN)))
-        {
-            st->epSquare = to - pawn_push(us);
-            k ^= Zobrist::enpassant[file_of(st->epSquare)];
-        }
+        // Check later if the en passant square needs to be set
+        if ((int(to) ^ int(from)) == 16)
+            checkEP = true;
 
         else if (m.type_of() == PROMOTION)
         {
@@ -878,6 +876,54 @@ DirtyPiece Position::do_move(Move                      m,
 
     // Update king attacks used for fast check detection
     set_check_info();
+
+    while (checkEP) {
+        auto updateEpSquare = [&] {
+            st->epSquare = to - pawn_push(us);
+            k ^= Zobrist::enpassant[file_of(st->epSquare)];
+        };
+
+        uint64_t pawns = attacks_bb<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN);
+
+        // If there are no pawns attacking the ep square, ep is not possible
+        if (!pawns)
+            break;
+
+        // If there are checkers other than the to be captured pawn, ep is never legal
+        if (checkers() & ~square_bb(to))
+            break;
+
+        if (more_than_one(pawns)) {
+            // If there are two pawns potentially being abled to capture and atleast one
+            // is not pinned, ep is legal as there are no horizontal exposed checks
+            if (!more_than_one(blockers_for_king(them) & pawns)) {
+                updateEpSquare();
+                break;
+            }
+
+            // If there is no pawn on our kings file, and thus both pawns are pinned
+            // by bishops, ep is not legal as the king square must be in front of the to square.
+            // And because the ep square and the king are not on a common diagonal, either ep capture
+            // would expose the king to a check from one of the bishops
+            if (!(file_bb(square<KING>(them)) & pawns))
+                break;
+
+            // Otherwise remove the pawn on the king file, as a ep capture by it can never be legal and the 
+            // check below relies on there only being one pawn
+            pawns &= ~file_bb(square<KING>(them));
+        }
+
+        Square   ksq      = square<KING>(them);
+        Square   capsq    = to;
+        Bitboard occupied = (pieces() ^ lsb(pawns) ^ capsq) | (to - pawn_push(us));
+
+        // If we out king is not attacked after 
+        if (   !(attacks_bb<ROOK  >(ksq, occupied) & pieces(us, QUEEN, ROOK))
+            && !(attacks_bb<BISHOP>(ksq, occupied) & pieces(us, QUEEN, BISHOP)))
+            updateEpSquare();
+        
+        break;
+    }
 
     // Calculate the repetition info. It is the ply distance from the previous
     // occurrence of the same position, negative in the 3-fold case, or zero
