@@ -561,6 +561,16 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
+int corrplexityDiv[4] = {28047, 28047, 28047, 28047};
+int cutNodeBase[4] = {2864, 2864, 2864, 2864};
+int cutNodeNoTTM[4] = {966, 966, 966, 966};
+int ttCaptureBase[4] = {1210, 1210, 1210, 1210};
+int ttCaptureLowDepth[4] = {963, 963, 963, 963};
+int cutoffCntBase[4] = {1036, 1036, 1036, 1036};
+int cutoffCntAllNode[4] = {848, 848, 848, 848};
+
+TUNE(corrplexityDiv, cutNodeBase, cutNodeNoTTM, ttCaptureBase, ttCaptureLowDepth, cutoffCntBase, cutoffCntAllNode);
+
 
 // Main search function for both PV and non-PV nodes
 template<NodeType nodeType>
@@ -1191,21 +1201,33 @@ moves_loop:  // When in check, search starts here
 
         // These reduction adjustments have no proven non-linear scaling
 
+        auto square = [](int x) { return x * x; };
+
+        const int moveCountBucket = -(square(std::min(moveCount, 10) * 80 - 2233) / 1048576) + 4;
+
+        // static constexpr std::array<int16_t, 4> corrplexityDiv = {28047, 28047, 28047, 28047};
+        // static constexpr std::array<int16_t, 4> cutNodeBase = {2864, 2864, 2864, 2864};
+        // static constexpr std::array<int16_t, 4> cutNodeNoTTM = {966, 966, 966, 966};
+        // static constexpr std::array<int16_t, 4> ttCaptureBase = {1210, 1210, 1210, 1210};
+        // static constexpr std::array<int16_t, 4> ttCaptureLowDepth = {963, 963, 963, 963};
+        // static constexpr std::array<int16_t, 4> cutoffCntBase = {1036, 1036, 1036, 1036};
+        // static constexpr std::array<int16_t, 4> cutoffCntAllNode = {848, 848, 848, 848};
+
         r += 316;  // Base reduction offset to compensate for other tweaks
         r -= moveCount * 66;
-        r -= std::abs(correctionValue) / 28047;
+        r -= std::abs(correctionValue) / corrplexityDiv[moveCountBucket];
 
         // Increase reduction for cut nodes
         if (cutNode)
-            r += 2864 + 966 * !ttData.move;
+            r += cutNodeBase[moveCountBucket] + cutNodeNoTTM[moveCountBucket] * !ttData.move;
 
         // Increase reduction if ttMove is a capture
         if (ttCapture)
-            r += 1210 + (depth < 8) * 963;
+            r += ttCaptureBase[moveCountBucket] + (depth < 8) * ttCaptureLowDepth[moveCountBucket];
 
         // Increase reduction if next ply has a lot of fail high
         if ((ss + 1)->cutoffCnt > 2)
-            r += 1036 + allNode * 848;
+            r += cutoffCntBase[moveCountBucket] + allNode * cutoffCntAllNode[moveCountBucket];
 
         if (!capture && !givesCheck && ss->quietMoveStreak >= 2)
             r += (ss->quietMoveStreak - 1) * 50;
