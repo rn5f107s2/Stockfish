@@ -561,17 +561,6 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
-int corrplexityDiv[4] = {28047, 28047, 28047, 28047};
-int cutNodeBase[4] = {2864, 2864, 2864, 2864};
-int cutNodeNoTTM[4] = {966, 966, 966, 966};
-int ttCaptureBase[4] = {1210, 1210, 1210, 1210};
-int ttCaptureLowDepth[4] = {963, 963, 963, 963};
-int cutoffCntBase[4] = {1036, 1036, 1036, 1036};
-int cutoffCntAllNode[4] = {848, 848, 848, 848};
-
-TUNE(corrplexityDiv, cutNodeBase, cutNodeNoTTM, ttCaptureBase, ttCaptureLowDepth, cutoffCntBase, cutoffCntAllNode);
-
-
 // Main search function for both PV and non-PV nodes
 template<NodeType nodeType>
 Value Search::Worker::search(
@@ -1205,13 +1194,13 @@ moves_loop:  // When in check, search starts here
 
         const int moveCountBucket = -(square(std::min(moveCount, 10) * 80 - 2233) / 1048576) + 4;
 
-        // static constexpr std::array<int16_t, 4> corrplexityDiv = {28047, 28047, 28047, 28047};
-        // static constexpr std::array<int16_t, 4> cutNodeBase = {2864, 2864, 2864, 2864};
-        // static constexpr std::array<int16_t, 4> cutNodeNoTTM = {966, 966, 966, 966};
-        // static constexpr std::array<int16_t, 4> ttCaptureBase = {1210, 1210, 1210, 1210};
-        // static constexpr std::array<int16_t, 4> ttCaptureLowDepth = {963, 963, 963, 963};
-        // static constexpr std::array<int16_t, 4> cutoffCntBase = {1036, 1036, 1036, 1036};
-        // static constexpr std::array<int16_t, 4> cutoffCntAllNode = {848, 848, 848, 848};
+        static constexpr std::array<int16_t, 4> corrplexityDiv = {29678, 28010, 28190, 26723};
+        static constexpr std::array<int16_t, 4> cutNodeBase = {2786, 2768, 3025, 3106};
+        static constexpr std::array<int16_t, 4> cutNodeNoTTM = {1005, 862, 971, 913};
+        static constexpr std::array<int16_t, 4> ttCaptureBase = {1153, 1270, 1221, 1242};
+        static constexpr std::array<int16_t, 4> ttCaptureLowDepth = {925, 999, 938, 964};
+        static constexpr std::array<int16_t, 4> cutoffCntBase = {1001, 1004, 1096, 1009};
+        static constexpr std::array<int16_t, 4> cutoffCntAllNode = {831, 840, 843, 867};
 
         r += 316;  // Base reduction offset to compensate for other tweaks
         r -= moveCount * 66;
