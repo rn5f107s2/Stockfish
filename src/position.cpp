@@ -515,14 +515,21 @@ bool Position::legal(Move m) const {
     assert(color_of(moved_piece(m)) == us);
     assert(piece_on(square<KING>(us)) == make_piece(us, KING));
 
-    // En passant captures are a tricky special case. Because they are rather
-    // uncommon, we do it simply by testing whether the king is attacked after
+    // En passant captures are a tricky special case. Since 
+    // the ep square is only set if ep is legal, ep is always legal
+    // if there is only one pawn that can potentially capture.
+    // In the rare case that two pawns can potentially capture en passant, 
+    // we only know that atleast one of the captures is legal, not which one. 
+    // So in this case just do it simply by testing if the king is attacked after 
     // the move is made.
     if (m.type_of() == EN_PASSANT)
     {
         Square   ksq      = square<KING>(us);
         Square   capsq    = to - pawn_push(us);
         Bitboard occupied = (pieces() ^ from ^ capsq) | to;
+
+        if (!more_than_one(attacks_bb<PAWN>(capsq, ~us) & pieces(us, PAWN)))
+            return true;
 
         assert(to == ep_square());
         assert(moved_piece(m) == make_piece(us, PAWN));
@@ -909,11 +916,27 @@ DirtyPiece Position::do_move(Move                      m,
 
             Square   ksq      = square<KING>(them);
             Square   capsq    = to;
-            Bitboard occupied = (pieces() ^ lsb(pawns) ^ capsq) | (to - pawn_push(us));
+            Bitboard occupied = (pieces() ^ lsb(pawns) ^ capsq);
 
-            // If we out king is not attacked after 
-            if (   !(attacks_bb<ROOK  >(ksq, occupied) & pieces(us, QUEEN, ROOK))
-                && !(attacks_bb<BISHOP>(ksq, occupied) & pieces(us, QUEEN, BISHOP)))
+            // If our pawn is pinned vertically, ep is never legal 
+            if (pawns & file_bb(ksq) & blockers_for_king(them))
+                return false;
+
+            // If our pawn is pinned diagonally, ep is legal exactly when the ep square 
+            // the capturing pawn and the king are aligned
+            if (!(pawns & file_bb(ksq)) && (pawns & blockers_for_king(them)))
+                return aligned(ksq, lsb(pawns), (to - pawn_push(us)));
+
+            // If our pawn is not pinned and no horizontally moving slider is on our kings file 
+            // which is also the file where two pawns would disappear on ep, ep is always possible
+            if (   !(blockers_for_king(them) & pawns) 
+                && (   !(rank_bb(ksq) & pieces(us, QUEEN, ROOK)) 
+                    || !(rank_bb(ksq) & square_bb(to))))
+                return true;
+
+            // If our king is attacked after the capturing and capture pawn are removed,
+            // ep is not legal
+            if (!(attacks_bb<ROOK>(ksq, occupied) & pieces(us, QUEEN, ROOK)))
                 return true;
             
             return false;
