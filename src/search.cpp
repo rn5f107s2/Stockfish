@@ -569,6 +569,8 @@ void Search::Worker::clear() {
         reductions[i] = int(2782 / 128.0 * std::log(i));
 
     refreshTable.clear(networks[numaAccessToken]);
+
+    outOfQSExt = false;
 }
 
 
@@ -1564,6 +1566,14 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
 
             ss->staticEval = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, correctionValue);
+        }
+
+        if (!ss->ttHit && !outOfQSExt && abs(correctionValue) > 23456789 && abs(beta - bestValue) < 21) {
+            outOfQSExt = true;
+            value = search<NonPV>(pos, ss, alpha, beta, 1 + (bestValue >= beta), false);
+            outOfQSExt = false;
+
+            return value;
         }
 
         // Stand pat. Return immediately if static value is at least beta
