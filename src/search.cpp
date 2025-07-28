@@ -867,12 +867,15 @@ Value Search::Worker::search(
         ss->currentMove                   = Move::null();
         ss->continuationHistory           = &continuationHistory[0][0][NO_PIECE][0];
         ss->continuationCorrectionHistory = &continuationCorrectionHistory[NO_PIECE][0];
+        ss->statScore = -15000;
 
         do_null_move(pos, st);
 
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, false);
 
         undo_null_move(pos);
+
+        ss->statScore = 0;
 
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && !is_win(nullValue))
