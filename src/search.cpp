@@ -1568,19 +1568,22 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
               to_corrected_static_eval(unadjustedStaticEval, correctionValue);
         }
 
-        if (!ss->ttHit && !outOfQSExt && abs(correctionValue) > 23456789 && abs(beta - bestValue) < 21) {
-            outOfQSExt = true;
-            value = search<NonPV>(pos, ss, alpha, beta, 1 + (bestValue >= beta), false);
-            outOfQSExt = false;
-
-            return value;
-        }
-
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)
         {
+            if (ttData.bound == BOUND_UPPER && correctionValue < -6553600 && !outOfQSExt && bestValue - beta < 33) {
+                outOfQSExt = true;
+                
+                value = search<NonPV>(pos, ss, alpha, beta, 2, false);
+
+                outOfQSExt = false;
+
+                return value;
+            }
+
             if (!is_decisive(bestValue))
                 bestValue = (bestValue + beta) / 2;
+
             if (!ss->ttHit)
                 ttWriter.write(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER,
                                DEPTH_UNSEARCHED, Move::none(), unadjustedStaticEval,
