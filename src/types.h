@@ -163,6 +163,11 @@ constexpr Value VALUE_TB                 = VALUE_MATE_IN_MAX_PLY - 1;
 constexpr Value VALUE_TB_WIN_IN_MAX_PLY  = VALUE_TB - MAX_PLY;
 constexpr Value VALUE_TB_LOSS_IN_MAX_PLY = -VALUE_TB_WIN_IN_MAX_PLY;
 
+constexpr int MG_LIMIT = 15258;
+constexpr int EG_LIMIT = 3915;
+
+constexpr int PHASE_MG = 128;
+constexpr int PHASE_EG = 0;
 
 constexpr bool is_valid(Value value) { return value != VALUE_NONE; }
 

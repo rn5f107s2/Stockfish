@@ -157,6 +157,7 @@ class Position {
     bool  upcoming_repetition(int ply) const;
     bool  has_repeated() const;
     int   rule50_count() const;
+    int   phase() const;
     Value non_pawn_material(Color c) const;
     Value non_pawn_material() const;
 
@@ -312,6 +313,12 @@ inline Value Position::non_pawn_material() const {
 inline int Position::game_ply() const { return gamePly; }
 
 inline int Position::rule50_count() const { return st->rule50; }
+
+inline int Position::phase() const {
+    Value npm   = std::clamp(non_pawn_material(), EG_LIMIT, MG_LIMIT);
+
+    return ((npm - EG_LIMIT) * PHASE_MG) / (MG_LIMIT - EG_LIMIT);
+}
 
 inline bool Position::is_chess960() const { return chess960; }
 

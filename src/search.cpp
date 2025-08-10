@@ -569,6 +569,18 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
+int baseMg = 90, baseEg = 90;
+int cnntthMg = 20, cnntthEg = 20;
+int imprultMg = 2048, imprMultEg = 2048;
+int worseMultMg = 341, worseMultEg = 341;
+int statSDivMg = 356, statSDivEg = 356;
+int corrDivMg = 171290, corrDivEg = 171290;
+
+TUNE(baseMg, baseEg, cnntthMg, cnntthEg, imprultMg, imprMultEg, worseMultMg, worseMultEg)
+TUNE(SetRange(1, 700), statSDivMg, statSDivEg)
+TUNE(SetRange(1, 342580), corrDivMg, corrDivEg)
+
+
 
 // Main search function for both PV and non-PV nodes
 template<NodeType nodeType>
@@ -838,14 +850,20 @@ Value Search::Worker::search(
     // Step 8. Futility pruning: child node
     // The depth condition is important for mate finding.
     {
+        const int phase = pos.phase();
+
+        auto make_margin = [&](int mg, int eg) {
+            return (phase * mg + (PHASE_MG - phase) * eg) / PHASE_MG;
+        };
+
         auto futility_margin = [&](Depth d) {
-            Value futilityMult = 90 - 20 * (cutNode && !ss->ttHit);
+            Value futilityMult = make_margin(baseMg, baseEg) - make_margin(cnntthMg, cnntthEg) * (cutNode && !ss->ttHit);
 
             return futilityMult * d                      //
-                 - improving * futilityMult * 2          //
-                 - opponentWorsening * futilityMult / 3  //
-                 + (ss - 1)->statScore / 356             //
-                 + std::abs(correctionValue) / 171290;
+                 - improving * futilityMult * make_margin(imprultMg, imprMultEg) / 1024    //
+                 - opponentWorsening * futilityMult * make_margin(worseMultMg, worseMultEg) / 1024 //
+                 + (ss - 1)->statScore / make_margin(statSDivMg, statSDivEg)             //
+                 + std::abs(correctionValue) / make_margin(corrDivMg, corrDivEg);
         };
 
         if (!ss->ttPv && depth < 14 && eval - futility_margin(depth) >= beta && eval >= beta
