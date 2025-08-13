@@ -844,13 +844,13 @@ Value Search::Worker::search(
         };
 
         auto futility_margin = [&](Depth d) {
-            Value futilityMult = make_margin(86, 90) - make_margin(21, 21) * (cutNode && !ss->ttHit);
+            Value futilityMult = make_margin(90, 80) - make_margin(20, 20) * (cutNode && !ss->ttHit);
 
             return futilityMult * d                      //
-                 - improving * futilityMult * make_margin(2052, 2088) / 1024    //
-                 - opponentWorsening * futilityMult * make_margin(337, 341) / 1024 //
-                 + (ss - 1)->statScore / make_margin(367, 350)             //
-                 + std::abs(correctionValue) / make_margin(170801, 161144);
+                 - improving * futilityMult * make_margin(2300, 1700) / 1024    //
+                 - opponentWorsening * futilityMult * make_margin(300, 600) / 1024 //
+                 + (ss - 1)->statScore / make_margin(360, 360)             //
+                 + std::abs(correctionValue) / make_margin(181290, 140000);
         };
 
         if (!ss->ttPv && depth < 14 && eval - futility_margin(depth) >= beta && eval >= beta
