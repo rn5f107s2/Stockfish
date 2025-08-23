@@ -617,7 +617,7 @@ Value Search::Worker::search(
     SearchedList capturesSearched;
     SearchedList quietsSearched;
 
-    Value pvWindow = threadIdx % 8;
+    Value pvWindow = rootNode ? threadIdx % 8 : 0;
 
     // Step 1. Initialize node
     ss->inCheck   = pos.checkers();
