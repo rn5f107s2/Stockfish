@@ -617,6 +617,8 @@ Value Search::Worker::search(
     SearchedList capturesSearched;
     SearchedList quietsSearched;
 
+    Value pvWindow = threadIdx % 8;
+
     // Step 1. Initialize node
     ss->inCheck   = pos.checkers();
     priorCapture  = pos.captured_piece();
@@ -1367,7 +1369,7 @@ moves_loop:  // When in check, search starts here
                     depth -= 2;
 
                 assert(depth > 0);
-                alpha = value;  // Update alpha! Always alpha < beta
+                alpha = value - pvWindow;  // Update alpha! Always alpha < beta
             }
         }
 
