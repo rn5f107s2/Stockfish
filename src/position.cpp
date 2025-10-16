@@ -777,6 +777,9 @@ DirtyBoardData Position::do_move(Move                      m,
                 assert(relative_rank(us, to) == RANK_6);
                 assert(piece_on(to) == NO_PIECE);
                 assert(piece_on(capsq) == make_piece(them, PAWN));
+
+                // Update board and piece lists in ep case, normal captures are updated later
+                remove_piece(capsq, &dts);
             }
 
             st->pawnKey ^= Zobrist::psq[captured][capsq];
@@ -792,9 +795,6 @@ DirtyBoardData Position::do_move(Move                      m,
 
         dp.remove_pc = captured;
         dp.remove_sq = capsq;
-
-        // Update board and piece lists
-        remove_piece(capsq, &dts);
 
         k ^= Zobrist::psq[captured][capsq];
         st->materialKey ^= Zobrist::psq[captured][8 + pieceCount[captured]];
@@ -824,8 +824,13 @@ DirtyBoardData Position::do_move(Move                      m,
     }
 
     // Move the piece. The tricky Chess960 castling is handled earlier
-    if (m.type_of() != CASTLING)
-        move_piece(from, to, &dts);
+    if (m.type_of() != CASTLING) {
+        if (captured && m.type_of() != EN_PASSANT) {
+            remove_piece(from, &dts);
+            swap_piece(to, pc, &dts);  
+        } else
+            move_piece(from, to, &dts);
+    }
 
     // If the moving piece is a pawn do some special extra work
     if (type_of(pc) == PAWN)
@@ -842,8 +847,7 @@ DirtyBoardData Position::do_move(Move                      m,
             assert(relative_rank(us, to) == RANK_8);
             assert(type_of(promotion) >= KNIGHT && type_of(promotion) <= QUEEN);
 
-            remove_piece(to, &dts);
-            put_piece(promotion, to, &dts);
+            swap_piece(to, promotion, &dts);
 
             dp.add_pc = promotion;
             dp.add_sq = to;
@@ -1039,7 +1043,7 @@ void Position::undo_move(Move m) {
     assert(pos_is_ok());
 }
 
-template<bool put_piece>
+template<bool put_piece, bool compute_ray>
 void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
     // Add newly threatened pieces
     Bitboard occupied   = pieces();
@@ -1060,32 +1064,34 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             st->threatsToSquare[threatened_sq] &= ~square_bb(s);
     }
 
-    // Remove threats of sliders that are now blocked by pc
-    Bitboard sliders = pieces(BISHOP, ROOK, QUEEN) & ~square_bb(s) & st->threatsToSquare[s];
-    while (sliders)
-    {
-        Square slider_sq = pop_lsb(sliders);
-        Piece  slider    = piece_on(slider_sq);
-
-        Bitboard ray = RayPassBB[slider_sq][s] & ~BetweenBB[slider_sq][s];
-        Bitboard threatened = ray & attacks_bb<QUEEN>(s, occupied) & occupied;
-
-        assert(!more_than_one(threatened));
-        if (threatened)
+    if constexpr (compute_ray) {
+        // Remove threats of sliders that are now blocked by pc
+        Bitboard sliders = pieces(BISHOP, ROOK, QUEEN) & ~square_bb(s) & st->threatsToSquare[s];
+        while (sliders)
         {
-            Square threatened_sq = lsb(threatened);
-            ray &= BetweenBB[s][threatened_sq];
+            Square slider_sq = pop_lsb(sliders);
+            Piece  slider    = piece_on(slider_sq);
 
-            Piece threatened_pc = piece_on(threatened_sq);
-            dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
-        }
+            Bitboard ray = RayPassBB[slider_sq][s] & ~BetweenBB[slider_sq][s];
+            Bitboard threatened = ray & attacks_bb<QUEEN>(s, occupied) & occupied;
 
-        while (ray) {
-            Square ray_sq = pop_lsb(ray);
-            if (put_piece)
-                st->threatsToSquare[ray_sq] &= ~square_bb(slider_sq);
-            else
-                st->threatsToSquare[ray_sq] |= square_bb(slider_sq);
+            assert(!more_than_one(threatened));
+            if (threatened)
+            {
+                Square threatened_sq = lsb(threatened);
+                ray &= BetweenBB[s][threatened_sq];
+
+                Piece threatened_pc = piece_on(threatened_sq);
+                dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
+            }
+
+            while (ray) {
+                Square ray_sq = pop_lsb(ray);
+                if (put_piece)
+                    st->threatsToSquare[ray_sq] &= ~square_bb(slider_sq);
+                else
+                    st->threatsToSquare[ray_sq] |= square_bb(slider_sq);
+            }
         }
     }
 
