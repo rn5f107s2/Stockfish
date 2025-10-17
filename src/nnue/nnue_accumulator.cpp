@@ -45,6 +45,13 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
                        AccumulatorState<PSQFeatureSet>&                        target_state,
                        const AccumulatorState<PSQFeatureSet>&                  computed);
 
+template<Color Perspective, IndexType TransformedFeatureDimensions>
+void threat_double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
+                              const Square                                            ksq,
+                              AccumulatorState<ThreatFeatureSet>&                     target_state,
+                              DirtyThreats&                                           diff,
+                              const AccumulatorState<ThreatFeatureSet>&               computed);
+
 template<Color Perspective,
          bool  Forward,
          typename FeatureSet,
@@ -195,22 +202,35 @@ void AccumulatorStack::forward_update_incremental(
 
     for (std::size_t next = begin + 1; next < size; next++)
     {
-        if (std::is_same_v<FeatureSet, PSQFeatureSet> && next + 1 < size)
+        if (next + 1 < size)
         {
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (dp1.to != SQ_NONE && dp1.to == dp2.remove_sq)
-            {
-                const Square captureSq = dp1.to;
-                dp1.to = dp2.remove_sq = SQ_NONE;
-                double_inc_update<Perspective>(featureTransformer, ksq, psq_accumulators[next],
-                                               psq_accumulators[next + 1],
-                                               psq_accumulators[next - 1]);
-                dp1.to = dp2.remove_sq = captureSq;
+            if (dp1.to != SQ_NONE && dp1.to == dp2.remove_sq) {
+                if (std::is_same_v<FeatureSet, PSQFeatureSet>) {
+                    const Square captureSq = dp1.to;
+                    dp1.to = dp2.remove_sq = SQ_NONE;
+                    double_inc_update<Perspective>(featureTransformer, ksq, psq_accumulators[next],
+                                                psq_accumulators[next + 1],
+                                                psq_accumulators[next - 1]);
+                    dp1.to = dp2.remove_sq = captureSq;
 
-                next++;
-                continue;
+                    next++;
+                    continue;
+                } else if (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
+                    DirtyThreats diff;
+
+                    for (auto& dt : threat_accumulators[next].diff.list)
+                        if (!dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
+                            diff.list.push_back(dt);
+
+                    for (auto& dt : threat_accumulators[next + 1].diff.list)
+                        if ( dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
+                            diff.list.push_back(dt);
+
+                    threat_double_inc_update<Perspective, Dimensions>(featureTransformer, ksq, threat_accumulators[next + 1], diff, threat_accumulators[next - 1]);
+                }
             }
         }
 
@@ -483,6 +503,27 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
         updateContext.template apply<Add, Sub, Sub, Sub>(added[0], removed[0], removed[1],
                                                          removed[2]);
     }
+
+    target_state.acc<TransformedFeatureDimensions>().computed[Perspective] = true;
+}
+
+template<Color Perspective, IndexType TransformedFeatureDimensions>
+void threat_double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
+                              const Square                                            ksq,
+                              AccumulatorState<ThreatFeatureSet>&                     target_state,
+                              DirtyThreats&                                           diff,
+                              const AccumulatorState<ThreatFeatureSet>&               computed) {
+
+    assert(computed.acc<TransformedFeatureDimensions>().computed[Perspective]);
+    assert(!target_state.acc<TransformedFeatureDimensions>().computed[Perspective]);
+
+    ThreatFeatureSet::IndexList removed, added;
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, diff, removed, added);
+
+    auto updateContext =
+      make_accumulator_update_context<Perspective>(featureTransformer, computed, target_state);
+
+    updateContext.apply(added, removed);
 
     target_state.acc<TransformedFeatureDimensions>().computed[Perspective] = true;
 }
