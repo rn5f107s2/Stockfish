@@ -218,19 +218,21 @@ void AccumulatorStack::forward_update_incremental(
 
                     next++;
                     continue;
-                } else if (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
-                    DirtyThreats diff;
-
-                    for (auto& dt : threat_accumulators[next].diff.list)
-                        if (!dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
-                            diff.list.push_back(dt);
-
-                    for (auto& dt : threat_accumulators[next + 1].diff.list)
-                        if ( dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
-                            diff.list.push_back(dt);
-
-                    threat_double_inc_update<Perspective, Dimensions>(featureTransformer, ksq, threat_accumulators[next + 1], diff, threat_accumulators[next - 1]);
                 }
+            }
+
+            if (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
+                DirtyThreats diff;
+
+                for (auto& dt : threat_accumulators[next].diff.list)
+                    if (!dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
+                        diff.list.push_back(dt);
+
+                for (auto& dt : threat_accumulators[next + 1].diff.list)
+                    if ( dt.add || (dt.pc_sq != dp2.remove_sq && dt.threatened_sq != dp2.remove_sq))
+                        diff.list.push_back(dt);
+
+                threat_double_inc_update<Perspective, Dimensions>(featureTransformer, ksq, threat_accumulators[next + 1], diff, threat_accumulators[next - 1]);
             }
         }
 
