@@ -216,10 +216,12 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
             if (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
-                if (double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2))
-                    next++;
+                if (dp2.remove_sq != SQ_NONE || (threat_accumulators[next].diff.threatenedSqs & square_bb(dp2.from))) {
+                    if (double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2))
+                        next++;
 
-                continue;
+                    continue;
+                }
             } else if (dp1.to != SQ_NONE && dp1.to == dp2.remove_sq) {
                 const Square captureSq = dp1.to;
                 dp1.to = dp2.remove_sq = SQ_NONE;

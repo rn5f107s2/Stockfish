@@ -308,6 +308,8 @@ struct DirtyThreats {
     DirtyThreatList list;
     Color           us;
     Square          prevKsq, ksq;
+
+    Bitboard threatenedSqs;
 };
 
 struct DirtyBoardData {
