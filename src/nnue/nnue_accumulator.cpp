@@ -506,7 +506,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 #if 0
     ThreatFeatureSet::FusedUpdateData fd;
 
-    fd.dp2removed = dp2.remove_sq;
+    fd.dp2removed = (dp2.remove_sq != dp2.add_sq ? dp2.remove_sq : SQ_NONE);
     fd.dp2from    = (dp2.from != dp2.add_sq && dp2.from != dp2.to) ? dp2.from : SQ_NONE /* FUCK FRC HOW EVEN CAME UP WITH THIS CRAP */;
 
     DirtyThreatList dtl;
@@ -520,25 +520,37 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     int adds = 0;
     int removes = 0;
 
-    for (const auto [attacker, attacked, from, to, add] : dtl)
-        if (to == fd.dp2from) {
-            if (add) {
-                fd.dp2fromBoard |= square_bb(from);
-                std::cout << "Adding from " << int(from) << " " << int(to) << " " << int(fd.dp2from) << " " << int(dp2.to) << std::endl;
-                adds++;
+    std::cout << "Move: " << int(dp2.from) << " " << int(dp2.to) << std::endl; 
 
+    for (const auto [attacker, attacked, from, to, add] : middle_state.diff.list)
+        if (to == fusedData.dp2removed) {
+            if (add) {
                 bool found = false;
 
                 for (auto& dt : dtl)
                     found |= dt.isInverse({attacker, attacked, from, to, add});
-                
-                if (!found)
-                    std::cout << "The existence of this makes me wonder" << std::endl;
 
+                std::cout << "Added " << int(from) << " " << int(to) << std::endl;
+
+                adds++;
+
+                if (!found)
+                    std::cout << "iwonderwhyiwonderhow" << std::endl;
+
+                fusedData.dp2fromBoard |= square_bb(from);
                 continue;
-            } else {
-                std::cout << "Removing from " << int(from) << " " << bool(fd.dp2fromBoard & square_bb(from)) << std::endl;
+            } else if(fusedData.dp2fromBoard & square_bb(from)) {
                 removes++;
+                std::cout << "Removed " << int(from) << " " << int(to) << std::endl;
+                continue;
+            }
+        }
+
+    for (const auto [attacker, attacked, from, to, add] : target_state.diff.list)
+        if (to == fusedData.dp2removed) {
+            if(!add && fusedData.dp2fromBoard & square_bb(from)) {
+                removes++;
+                std::cout << "Removed " << int(from) << " " << int(to) << std::endl;
                 continue;
             }
         }
@@ -546,14 +558,18 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     std::cout << "I, the loop, hereby step down " << std::endl;
 
     if (adds != removes) {
-        std::cout << int(fd.dp2removed) << " " << adds << " " << removes << std::endl;
+        std::cout << "Something something " << int(fd.dp2removed) << " " << adds << " " << removes << std::endl;
     }
 
 #endif
 
     ThreatFeatureSet::IndexList removed, added;
+    fusedData.fp = true;
     ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added, fusedData);
+    fusedData.fp = false;
     ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added, fusedData);
+
+    dbg_mean_of(fusedData.dbg);
 
 
     auto updateContext =

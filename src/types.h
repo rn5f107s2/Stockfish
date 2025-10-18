@@ -296,6 +296,10 @@ struct DirtyThreat {
     Piece  pc, threatened_pc;
     Square pc_sq, threatened_sq;
     bool   add;
+
+    bool isInverse(const DirtyThreat& other) const {
+        return pc == other.pc && threatened_pc == other.threatened_pc && pc_sq == other.pc_sq && threatened_sq == other.threatened_sq && add != other.add;
+    }
 };
 
 using DirtyThreatList = ValueList<DirtyThreat, 64>;  // 32 is not enough, find better upper bound?

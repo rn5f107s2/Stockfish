@@ -111,6 +111,10 @@ class FullThreats {
 
         Square dp2removed;
         Square dp2from;
+
+        bool fp;
+
+        int dbg = 0;
     };
 
     // Maximum number of simultaneously active features.
@@ -131,7 +135,7 @@ class FullThreats {
     template<Color Perspective>
     static void
     append_changed_indices(Square ksq, const DiffType& diff, IndexList& removed, IndexList& added) {
-      static FusedUpdateData empty = {0, 0, 0, SQ_NONE, SQ_NONE};
+      static FusedUpdateData empty = {0, 0, 0, SQ_NONE, SQ_NONE, false};
       append_changed_indices<Perspective>(ksq, diff, removed, added, empty);
     }
 
