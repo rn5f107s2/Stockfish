@@ -203,29 +203,27 @@ void FullThreats::append_changed_indices(Square           ksq,
              }
         }
 
-        // These two both work but are a slowdonw for some reason? I dont get it
+        if (to != SQ_NONE && to == fusedData.dp2removed) {
+              if (add) {
+                   if (firstPass) {
+                       fusedData.dp2removedTargetBoard |= square_bb(from);
+                       continue;
+                   }
+               } else if (fusedData.dp2removedTargetBoard & square_bb(from)) {
+                   continue;
+               }
+         }
 
-        // if (to != SQ_NONE && to == fusedData.dp2removed) {
-        //      if (add) {
-        //           if (firstPass) {
-        //               fusedData.dp2removedTargetBoard |= square_bb(from);
-        //               continue;
-        //           }
-        //       } else if (fusedData.dp2removedTargetBoard & square_bb(from)) {
-        //           continue;
-        //       }
-        // }
-
-        // if (from == fusedData.dp2removed) {
-        //       if (add) {
-        //           if (firstPass) {
-        //               fusedData.dp2removedOriginBoard |= square_bb(to);
-        //               continue;
-        //           }
-        //       } else if (fusedData.dp2removedOriginBoard & square_bb(to)) {
-        //           continue;
-        //       }
-        // }
+         if (from == fusedData.dp2removed) {
+               if (add) {
+                   if (firstPass) {
+                       fusedData.dp2removedOriginBoard |= square_bb(to);
+                       continue;
+                   }
+               } else if (fusedData.dp2removedOriginBoard & square_bb(to)) {
+                   continue;
+               }
+         }
 
         IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
 

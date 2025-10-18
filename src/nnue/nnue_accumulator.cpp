@@ -55,7 +55,6 @@ bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void single_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
-                       const Square                                            ksq,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
                        const AccumulatorState<ThreatFeatureSet>&               computed,
                        const ThreatFeatureSet::IndexList&                      added,
@@ -517,7 +516,7 @@ bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     bool savedUpdated = (fusedData.dp2fromBoard || fusedData.dp2removedOriginBoard || fusedData.dp2removedTargetBoard);
 
     if (!savedUpdated) {
-        single_inc_update<Perspective>(featureTransformer, ksq, middle_state, computed, added, removed);
+        single_inc_update<Perspective>(featureTransformer, middle_state, computed, added, removed);
 
         return false;
     }
@@ -536,7 +535,6 @@ bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void single_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
-                       const Square                                            ksq,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
                        const AccumulatorState<ThreatFeatureSet>&               computed,
                        const ThreatFeatureSet::IndexList&                      added,
