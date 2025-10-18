@@ -195,38 +195,37 @@ void FullThreats::append_changed_indices(Square           ksq,
     for (const auto [attacker, attacked, from, to, add] : diff.list)
     {
         if (to == fusedData.dp2from) {
-            if (add) {
-                fusedData.dp2fromBoard |= square_bb(from);
-                fusedData.dbg += 2;
-                continue;
-            } else if (fusedData.dp2fromBoard & square_bb(from)) {
-                continue;
-            }
+             if (add) {
+                 fusedData.dp2fromBoard |= square_bb(from);
+                 continue;
+             } else if (fusedData.dp2fromBoard & square_bb(from)) {
+                 continue;
+             }
         }
 
-        if (to != SQ_NONE && to == fusedData.dp2removed) {
-            if (add) {
-                if (firstPass) {
-                    fusedData.dp2removedTargetBoard |= square_bb(from);
-                    fusedData.dbg += 2;
-                    continue;
-                }
-            } else if (fusedData.dp2removedTargetBoard & square_bb(from)) {
-                continue;
-            }
-        }
+        // These two both work but are a slowdonw for some reason? I dont get it
 
-        if (from == fusedData.dp2removed) {
-            if (add) {
-                if (firstPass) {
-                    fusedData.dp2removedOriginBoard |= square_bb(to);
-                    fusedData.dbg += 2;
-                    continue;
-                }
-            } else if (fusedData.dp2removedOriginBoard & square_bb(to)) {
-                continue;
-            }
-        }
+        // if (to != SQ_NONE && to == fusedData.dp2removed) {
+        //      if (add) {
+        //           if (firstPass) {
+        //               fusedData.dp2removedTargetBoard |= square_bb(from);
+        //               continue;
+        //           }
+        //       } else if (fusedData.dp2removedTargetBoard & square_bb(from)) {
+        //           continue;
+        //       }
+        // }
+
+        // if (from == fusedData.dp2removed) {
+        //       if (add) {
+        //           if (firstPass) {
+        //               fusedData.dp2removedOriginBoard |= square_bb(to);
+        //               continue;
+        //           }
+        //       } else if (fusedData.dp2removedOriginBoard & square_bb(to)) {
+        //           continue;
+        //       }
+        // }
 
         IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
 

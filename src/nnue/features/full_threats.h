@@ -111,10 +111,6 @@ class FullThreats {
 
         Square dp2removed;
         Square dp2from;
-
-        bool fp;
-
-        int dbg = 0;
     };
 
     // Maximum number of simultaneously active features.
