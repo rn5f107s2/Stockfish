@@ -190,12 +190,14 @@ void FullThreats::append_changed_indices(Square           ksq,
                                          const DiffType&  diff,
                                          IndexList&       removed,
                                          IndexList&       added,
-                                         FusedUpdateData& fusedData) {
+                                         FusedUpdateData& fusedData,
+                                         bool             firstPass) {
     for (const auto [attacker, attacked, from, to, add] : diff.list)
     {
         if (to == fusedData.dp2from) {
             if (add) {
                 fusedData.dp2fromBoard |= square_bb(from);
+                fusedData.dbg += 2;
                 continue;
             } else if (fusedData.dp2fromBoard & square_bb(from)) {
                 continue;
@@ -204,15 +206,48 @@ void FullThreats::append_changed_indices(Square           ksq,
 
         if (to != SQ_NONE && to == fusedData.dp2removed) {
             if (add) {
-                if (fusedData.fp) {
+                if (firstPass) {
                     fusedData.dp2removedTargetBoard |= square_bb(from);
+                    fusedData.dbg += 2;
                     continue;
                 }
-            } else if(fusedData.dp2removedTargetBoard & square_bb(from)) {
+            } else if (fusedData.dp2removedTargetBoard & square_bb(from)) {
                 continue;
             }
         }
 
+        if (from == fusedData.dp2removed) {
+            if (add) {
+                if (firstPass) {
+                    fusedData.dp2removedOriginBoard |= square_bb(to);
+                    fusedData.dbg += 2;
+                    continue;
+                }
+            } else if (fusedData.dp2removedOriginBoard & square_bb(to)) {
+                continue;
+            }
+        }
+
+        IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
+
+        if (index == Dimensions)
+            continue;
+
+        if (add)
+            added.push_back(index);
+        else
+            removed.push_back(index);
+    }
+}
+
+// Get a list of indices for recently changed features
+template<Color Perspective>
+void FullThreats::append_changed_indices(Square           ksq,
+                                         const DiffType&  diff,
+                                         IndexList&       removed,
+                                         IndexList&       added) {
+    for (const auto [attacker, attacked, from, to, add] : diff.list)
+    {
         IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
 
         if (index == Dimensions)
@@ -230,12 +265,24 @@ template void FullThreats::append_changed_indices<WHITE>(Square           ksq,
                                                          const DiffType&  diff,
                                                          IndexList&       removed,
                                                          IndexList&       added,
-                                                         FusedUpdateData& fusedData);
+                                                         FusedUpdateData& fusedData,
+                                                         bool             firstPass);
 template void FullThreats::append_changed_indices<BLACK>(Square           ksq,
                                                          const DiffType&  diff,
                                                          IndexList&       removed,
                                                          IndexList&       added,
-                                                         FusedUpdateData& fusedData);
+                                                         FusedUpdateData& fusedData,
+                                                         bool             firstPass);
+
+// Explicit template instantiations
+template void FullThreats::append_changed_indices<WHITE>(Square           ksq,
+                                                         const DiffType&  diff,
+                                                         IndexList&       removed,
+                                                         IndexList&       added);
+template void FullThreats::append_changed_indices<BLACK>(Square           ksq,
+                                                         const DiffType&  diff,
+                                                         IndexList&       removed,
+                                                         IndexList&       added);
 
 bool FullThreats::requires_refresh(const DiffType& diff, Color perspective) {
     return perspective == diff.us

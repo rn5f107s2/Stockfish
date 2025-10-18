@@ -564,13 +564,8 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 #endif
 
     ThreatFeatureSet::IndexList removed, added;
-    fusedData.fp = true;
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added, fusedData);
-    fusedData.fp = false;
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added, fusedData);
-
-    dbg_mean_of(fusedData.dbg);
-
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added, fusedData, true);
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added, fusedData, false);
 
     auto updateContext =
       make_accumulator_update_context<Perspective>(featureTransformer, computed, target_state);
