@@ -206,11 +206,11 @@ void FullThreats::append_changed_indices(Square           ksq,
                }
             }
 
-            if (to != SQ_NONE && to == fusedData->dp2removed) {
+            if (to == fusedData->dp2removed) {
                 if (add) {
                     if (first) {
                         fusedData->dp2removedTargetBoard |= square_bb(from);
-                    continue;
+                        continue;
                     }
                 } else if (fusedData->dp2removedTargetBoard & square_bb(from)) {
                     continue;

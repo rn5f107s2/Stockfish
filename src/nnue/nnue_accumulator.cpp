@@ -208,7 +208,13 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && dp2.remove_sq != SQ_NONE && ((threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)) || (threat_accumulators[next].diff.threatenedSqs & square_bb(dp2.remove_sq)))) 
+            Bitboard threateningSqs = threat_accumulators[next].diff.threateningSqs;
+            Bitboard threatenedSqs =  threat_accumulators[next].diff.threatenedSqs;
+
+            if (   std::is_same_v<FeatureSet, ThreatFeatureSet> 
+                && dp2.remove_sq != SQ_NONE 
+                && (   (threateningSqs & square_bb(dp2.remove_sq)) 
+                    || (threatenedSqs  & square_bb(dp2.remove_sq)))) 
             {
                 double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
                 next++;
