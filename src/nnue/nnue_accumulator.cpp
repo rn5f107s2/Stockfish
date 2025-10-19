@@ -208,7 +208,7 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (std::is_same_v<FeatureSet, ThreatFeatureSet>) 
+            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && false) 
             {
                 double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
                 next++;
