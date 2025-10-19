@@ -1030,6 +1030,16 @@ void Position::undo_move(Move m) {
     assert(pos_is_ok());
 }
 
+template<bool put_piece>
+inline void addDirtyThreat(DirtyThreats* const dts, Piece pc, Piece threatened_pc, Square s, Square threatened_sq, bool put_piece) {
+    if (put_piece) {
+        dts->threatenedSqs  |= square_bb(threatened_sq);
+        dts->threateningSqs |= square_bb(s);
+    }
+
+    dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
+}
+
 template<bool put_piece, bool compute_ray>
 void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
     // Add newly threatened pieces
@@ -1070,7 +1080,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(threatened_sq != s);
         assert(threatened_pc);
 
-        dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
+        addDirtyThreat(dts, pc, threatened_pc, s, threatened_sq, put_piece);
     }
 
     Bitboard sliders = (pieces(ROOK, QUEEN) & rAttacks) | (pieces(BISHOP, QUEEN) & bAttacks);
@@ -1094,10 +1104,10 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             Square threatened_sq = lsb(threatened);
 
             Piece threatened_pc = piece_on(threatened_sq);
-            dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
+            addDirtyThreat(dts, slider, threatened_pc, slider_sq, threatened_sq, !put_piece);
         }
 
-        dts->list.push_back({slider, pc, slider_sq, s, put_piece});
+        addDirtyThreat(dts, slider, pc, slider_sq, s, put_piece);
     }
 
     // Add threats of sliders that were already threatening s,
@@ -1111,7 +1121,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(src_sq != s);
         assert(src_pc != NO_PIECE);
 
-        dts->list.push_back({src_pc, pc, src_sq, s, put_piece});
+        addDirtyThreat(dts, src_pc, pc, src_sq, s, put_piece);
     }
 }
 
