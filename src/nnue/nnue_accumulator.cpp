@@ -208,7 +208,7 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && false) 
+            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && dp2.remove_sq != SQ_NONE && (threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq))) 
             {
                 double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
                 next++;
@@ -497,9 +497,15 @@ bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     assert(!middle_state.acc<TransformedFeatureDimensions>().computed[Perspective]);
     assert(!target_state.acc<TransformedFeatureDimensions>().computed[Perspective]);
 
+    ThreatFeatureSet::FusedUpdateData fusedData;
+
+    fusedData.dp2removed = dp2.remove_sq;
+
     ThreatFeatureSet::IndexList removed, added;
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added);
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added);
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added, &fusedData, true);
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added, &fusedData, false);
+
+    // For some reason this doesnt always hit? dbg_hit_on(fusedData.dp2removedOriginBoard);
 
     auto updateContext =
       make_accumulator_update_context<Perspective>(featureTransformer, computed, target_state);
