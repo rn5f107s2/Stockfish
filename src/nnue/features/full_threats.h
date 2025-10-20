@@ -107,7 +107,8 @@ class FullThreats {
     struct FusedUpdateData {
         Bitboard dp2removedOriginBoard = 0;
         Bitboard dp2removedTargetBoard = 0;
-        Bitboard dp2fromBoard = 0;
+        Bitboard dp2fromTargetBoard = 0;
+        Bitboard dp2fromOriginBoard = 0;
 
         Square dp2removed;
         Square dp2from;
