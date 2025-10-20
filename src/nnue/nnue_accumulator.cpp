@@ -46,7 +46,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
                        const AccumulatorState<PSQFeatureSet>&                  computed);
 
 template<Color Perspective, IndexType TransformedFeatureDimensions>
-bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
+int double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
                        AccumulatorState<ThreatFeatureSet>&                     middle_state,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
@@ -208,9 +208,31 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && dp2.remove_sq != SQ_NONE && ((threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)) || (threat_accumulators[next].diff.threatenedSqs & square_bb(dp2.remove_sq)))) 
+            unsigned save = 0;
+
+            if (dp2.remove_sq != SQ_NONE) {
+                save += bool(threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)) * 2;
+                save += bool(threat_accumulators[next].diff.threatenedSqs & square_bb(dp2.remove_sq)) * 2;
+            }
+
+            if (   std::is_same_v<FeatureSet, ThreatFeatureSet> 
+                && save > (threat_accumulators[next].diff.list.size() + threat_accumulators[next + 1].diff.list.size()) / 2)
             {
-                double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
+                int n = 0;
+                
+                n += double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
+
+                if (threat_accumulators[next].diff.list.size() <= threat_accumulators[next + 1].diff.list.size()) {
+                    update_accumulator_incremental<Perspective, true>(featureTransformer, ksq, mut_accumulators<FeatureSet>()[next], accumulators<FeatureSet>()[next - 1]);
+                    n += threat_accumulators[next].diff.list.size();
+                } else {
+                    update_accumulator_incremental<Perspective, false>(featureTransformer, ksq, mut_accumulators<FeatureSet>()[next], accumulators<FeatureSet>()[next + 1]);
+                    n += threat_accumulators[next + 1].diff.list.size();
+                }
+
+                //dbg_extremes_of(n - (threat_accumulators[next].diff.list.size() + threat_accumulators[next + 1].diff.list.size()));
+                //dbg_hit_on(threat_accumulators[next].acc<Dimensions>().computed[Perspective]);
+
                 next++;
                 continue;
             } 
@@ -486,7 +508,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 }
 
 template<Color Perspective, IndexType TransformedFeatureDimensions>
-bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
+int double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
                        AccumulatorState<ThreatFeatureSet>&                     middle_state,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
@@ -514,7 +536,7 @@ bool double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 
     target_state.acc<TransformedFeatureDimensions>().computed[Perspective] = true;
 
-    return true;
+    return removed.size() + added.size();
 }
 
 template<Color Perspective,
