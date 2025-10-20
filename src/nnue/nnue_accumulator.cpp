@@ -116,6 +116,7 @@ std::vector<AccumulatorState<T>>& AccumulatorStack::mut_accumulators() noexcept 
 void AccumulatorStack::reset() noexcept {
     psq_accumulators[0].reset({});
     threat_accumulators[0].reset({});
+    latestUsable = 0;
     size = 1;
 }
 
@@ -123,6 +124,7 @@ void AccumulatorStack::push(const DirtyBoardData& dirtyBoardData) noexcept {
     assert(size + 1 < psq_accumulators.size());
     psq_accumulators[size].reset(dirtyBoardData.dp);
     threat_accumulators[size].reset(dirtyBoardData.dts);
+    latestUsable = size;
     size++;
 }
 
@@ -154,6 +156,10 @@ void AccumulatorStack::evaluate_side(const Position&                       pos,
     const auto last_usable_accum =
       find_last_usable_accumulator<Perspective, FeatureSet, Dimensions>();
 
+    if (last_usable_accum >= size)
+        backward_update_incremental<Perspective, FeatureSet>(pos, featureTransformer,
+                                                             last_usable_accum);
+
     if ((accumulators<FeatureSet>()[last_usable_accum].template acc<Dimensions>())
           .computed[Perspective])
         forward_update_incremental<Perspective, FeatureSet>(pos, featureTransformer,
@@ -177,6 +183,12 @@ void AccumulatorStack::evaluate_side(const Position&                       pos,
 // state just before a change that requires full refresh.
 template<Color Perspective, typename FeatureSet, IndexType Dimensions>
 std::size_t AccumulatorStack::find_last_usable_accumulator() const noexcept {
+
+    if (   std::is_same_v<FeatureSet, ThreatFeatureSet>
+        && latestUsable == size
+        && threat_accumulators[latestUsable].acc<Dimensions>().computed[Perspective]
+        && (threat_accumulators[latestUsable].diff.list.size() < threat_accumulators[size - 1].diff.list.size()))
+        return latestUsable;
 
     for (std::size_t curr_idx = size - 1; curr_idx > 0; curr_idx--)
     {
@@ -224,9 +236,6 @@ void AccumulatorStack::forward_update_incremental(
                 && save > 2 + std::min(threat_accumulators[next].diff.list.size(), threat_accumulators[next + 1].diff.list.size()))
             {                
                 double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
-
-                if (threat_accumulators[next].diff.list.size() > threat_accumulators[next + 1].diff.list.size())
-                    update_accumulator_incremental<Perspective, false>(featureTransformer, ksq, mut_accumulators<FeatureSet>()[next], accumulators<FeatureSet>()[next + 1]);
 
                 next++;
                 continue;

@@ -151,7 +151,8 @@ class AccumulatorStack {
     AccumulatorStack() :
         psq_accumulators(MAX_PLY + 1),
         threat_accumulators(MAX_PLY + 1),
-        size{1} {}
+        size{1},
+        latestUsable{0} {}
 
     template<typename T>
     [[nodiscard]] const AccumulatorState<T>& latest() const noexcept;
@@ -196,6 +197,7 @@ class AccumulatorStack {
     std::vector<AccumulatorState<PSQFeatureSet>>    psq_accumulators;
     std::vector<AccumulatorState<ThreatFeatureSet>> threat_accumulators;
     std::size_t                                     size;
+    std::size_t                                     latestUsable;
 };
 
 }  // namespace Stockfish::Eval::NNUE
