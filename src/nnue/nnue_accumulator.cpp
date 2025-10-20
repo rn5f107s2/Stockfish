@@ -233,7 +233,7 @@ void AccumulatorStack::forward_update_incremental(
             }
 
             if (   std::is_same_v<FeatureSet, ThreatFeatureSet> 
-                && save > 2 + std::min(threat_accumulators[next].diff.list.size(), threat_accumulators[next + 1].diff.list.size()))
+                && save > 1 + std::min(threat_accumulators[next].diff.list.size(), threat_accumulators[next + 1].diff.list.size()))
             {                
                 double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
 
