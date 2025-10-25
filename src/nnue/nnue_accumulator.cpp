@@ -208,12 +208,24 @@ void AccumulatorStack::forward_update_incremental(
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
 
-            if (std::is_same_v<FeatureSet, ThreatFeatureSet> && dp2.remove_sq != SQ_NONE && ((threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)) || (threat_accumulators[next].diff.threatenedSqs & square_bb(dp2.remove_sq)))) 
-            {
-                double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
+            int save = 0;
+
+            if (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
+                if (dp2.remove_sq != SQ_NONE) {
+                    save += bool(threat_accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)) * 2;
+                    save += bool(threat_accumulators[next].diff.threatenedSqs  & square_bb(dp2.remove_sq)) * 2;
+                }
+
+                size_t firstCost  = threat_accumulators[next    ].diff.list.size();
+                size_t secondCost = threat_accumulators[next + 1].diff.list.size();
+                size_t dualCost   = firstCost + secondCost - save;
+
+                if (dualCost < std::max(firstCost, secondCost)) {
+                    double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
+                }
                 next++;
                 continue;
-            } 
+            }
 
             if (std::is_same_v<FeatureSet, PSQFeatureSet> && dp1.to != SQ_NONE && dp1.to == dp2.remove_sq)
             {
