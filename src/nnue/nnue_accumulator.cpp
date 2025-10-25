@@ -222,9 +222,9 @@ void AccumulatorStack::forward_update_incremental(
 
                 if (dualCost < std::max(firstCost, secondCost)) {
                     double_inc_update<Perspective>(featureTransformer, ksq, threat_accumulators[next], threat_accumulators[next + 1], threat_accumulators[next - 1], dp2);
+                    next++;
+                    continue;
                 }
-                next++;
-                continue;
             }
 
             if (std::is_same_v<FeatureSet, PSQFeatureSet> && dp1.to != SQ_NONE && dp1.to == dp2.remove_sq)
