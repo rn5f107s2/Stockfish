@@ -69,7 +69,7 @@ void init_threat_offsets() {
 // Index of a feature for a given king position and another piece on some square
 template<Color Perspective>
 IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece attkd, Square ksq) {
-    bool enemy = (attkr ^ attkd) == 8;
+    bool enemy = (attkr ^ attkd) & 8;
     from       = (Square) (int(from) ^ OrientTBL[Perspective][ksq]);
     to         = (Square) (int(to) ^ OrientTBL[Perspective][ksq]);
 
@@ -78,6 +78,12 @@ IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece att
         attkr = ~attkr;
         attkd = ~attkd;
     }
+
+
+    // We currently dont evaluate in check, so any threat towards the opponents king has to be
+    // removed again before the accumulator will be evaluated, so we dont need to update those threats.
+    if (enemy && type_of(attkd) == KING)
+        return Dimensions;
 
     // Some threats imply the existence of the corresponding ones in the opposite
     // direction. We filter them here to ensure only one such threat is active.
