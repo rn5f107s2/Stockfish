@@ -319,6 +319,20 @@ struct AccumulatorUpdateContext {
         vec_t      acc[Tiling::NumRegs];
         psqt_vec_t psqt[Tiling::NumPsqtRegs];
 
+        // dbg_hit_on(!(added.size() || removed.size())); Hit #0: Total 2314116 Hits 138764 Hit Rate (%) 5.99642
+
+        if (!(added.size() || removed.size())) {
+            for (IndexType j = 0; j < Dimensions / Tiling::TileHeight; ++j)
+                for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                    (reinterpret_cast<vec_t*>(&toAcc[j * Tiling::TileHeight]))[k] = (reinterpret_cast<const vec_t*>(&fromAcc[j * Tiling::TileHeight]))[k];
+
+            for (IndexType j = 0; j < PSQTBuckets / Tiling::PsqtTileHeight; ++j)
+                for (IndexType k = 0; k < Tiling::NumPsqtRegs; ++k)
+                     (reinterpret_cast<vec_t*>(&toPsqtAcc[j * Tiling::PsqtTileHeight]))[k] = (reinterpret_cast<const vec_t*>(&fromPsqtAcc[j * Tiling::PsqtTileHeight]))[k];
+            
+            return;
+        }
+
         for (IndexType j = 0; j < Dimensions / Tiling::TileHeight; ++j)
         {
             auto* fromTile = reinterpret_cast<const vec_t*>(&fromAcc[j * Tiling::TileHeight]);
