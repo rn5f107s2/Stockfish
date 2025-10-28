@@ -534,6 +534,7 @@ void Search::Worker::do_move(
     nodes.fetch_add(1, std::memory_order_relaxed);
 
     DirtyBoardData dirtyBoardData = pos.do_move(move, st, givesCheck, &tt);
+
     accumulatorStack.push(dirtyBoardData);
 
     if (ss != nullptr)
@@ -549,8 +550,9 @@ void Search::Worker::do_move(
 void Search::Worker::do_null_move(Position& pos, StateInfo& st) { pos.do_null_move(st, tt); }
 
 void Search::Worker::undo_move(Position& pos, const Move move) {
-    pos.undo_move(move);
     accumulatorStack.pop();
+
+    pos.undo_move(move);
 }
 
 void Search::Worker::undo_null_move(Position& pos) { pos.undo_null_move(); }

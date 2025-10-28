@@ -151,14 +151,15 @@ class AccumulatorStack {
     AccumulatorStack() :
         psq_accumulators(MAX_PLY + 1),
         threat_accumulators(MAX_PLY + 1),
-        size{1} {}
+        threat_size{1},
+        psq_size{1} {}
 
     template<typename T>
     [[nodiscard]] const AccumulatorState<T>& latest() const noexcept;
 
     void reset() noexcept;
-    void push(const DirtyBoardData& dirtyBoardData) noexcept;
-    void pop() noexcept;
+    void push(const DirtyBoardData& dirtyBoardData, bool pushThreats = true) noexcept;
+    void pop(bool popThreats = true) noexcept;
 
     template<IndexType Dimensions>
     void evaluate(const Position&                       pos,
@@ -195,7 +196,8 @@ class AccumulatorStack {
 
     std::vector<AccumulatorState<PSQFeatureSet>>    psq_accumulators;
     std::vector<AccumulatorState<ThreatFeatureSet>> threat_accumulators;
-    std::size_t                                     size;
+    std::size_t                                     threat_size;
+    std::size_t                                     psq_size;
 };
 
 }  // namespace Stockfish::Eval::NNUE

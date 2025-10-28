@@ -69,7 +69,12 @@ void update_threats_accumulator_full(const FeatureTransformer<Dimensions>& featu
 
 template<typename T>
 const AccumulatorState<T>& AccumulatorStack::latest() const noexcept {
-    return accumulators<T>()[size - 1];
+    static_assert(std::is_same_v<T, PSQFeatureSet> || std::is_same_v<T, ThreatFeatureSet>,
+                  "Invalid Feature Set Type");
+
+    std::size_t s = std::is_same_v<T, PSQFeatureSet> ? psq_size : threat_size;
+    
+    return accumulators<T>()[s - 1];
 }
 
 // Explicit template instantiations
@@ -78,7 +83,12 @@ template const AccumulatorState<ThreatFeatureSet>& AccumulatorStack::latest() co
 
 template<typename T>
 AccumulatorState<T>& AccumulatorStack::mut_latest() noexcept {
-    return mut_accumulators<T>()[size - 1];
+    static_assert(std::is_same_v<T, PSQFeatureSet> || std::is_same_v<T, ThreatFeatureSet>,
+                  "Invalid Feature Set Type");
+
+    std::size_t s = std::is_same_v<T, PSQFeatureSet> ? psq_size : threat_size;
+
+    return mut_accumulators<T>()[s - 1];
 }
 
 template<typename T>
@@ -108,19 +118,23 @@ std::vector<AccumulatorState<T>>& AccumulatorStack::mut_accumulators() noexcept 
 void AccumulatorStack::reset() noexcept {
     psq_accumulators[0].reset({});
     threat_accumulators[0].reset({});
-    size = 1;
+    psq_size = threat_size = 1;
 }
 
-void AccumulatorStack::push(const DirtyBoardData& dirtyBoardData) noexcept {
-    assert(size + 1 < psq_accumulators.size());
-    psq_accumulators[size].reset(dirtyBoardData.dp);
-    threat_accumulators[size].reset(dirtyBoardData.dts);
-    size++;
+void AccumulatorStack::push(const DirtyBoardData& dirtyBoardData, bool pushThreats) noexcept {
+    assert(psq_size + 1 < psq_accumulators.size());
+    psq_accumulators[psq_size++].reset(dirtyBoardData.dp);
+
+    if (pushThreats)
+        threat_accumulators[threat_size++].reset(dirtyBoardData.dts);
 }
 
-void AccumulatorStack::pop() noexcept {
-    assert(size > 1);
-    size--;
+void AccumulatorStack::pop(bool popThreats) noexcept {
+    assert(psq_size > 1);
+    psq_size--;
+
+    if (popThreats)
+        threat_size--;
 }
 
 template<IndexType Dimensions>
@@ -169,8 +183,12 @@ void AccumulatorStack::evaluate_side(const Position&                       pos,
 // state just before a change that requires full refresh.
 template<Color Perspective, typename FeatureSet, IndexType Dimensions>
 std::size_t AccumulatorStack::find_last_usable_accumulator() const noexcept {
+    static_assert(std::is_same_v<FeatureSet, PSQFeatureSet> || std::is_same_v<FeatureSet, ThreatFeatureSet>,
+                  "Invalid Feature Set Type");
 
-    for (std::size_t curr_idx = size - 1; curr_idx > 0; curr_idx--)
+    std::size_t s = std::is_same_v<FeatureSet, PSQFeatureSet> ? psq_size : threat_size;
+
+    for (std::size_t curr_idx = s - 1; curr_idx > 0; curr_idx--)
     {
         if ((accumulators<FeatureSet>()[curr_idx].template acc<Dimensions>()).computed[Perspective])
             return curr_idx;
@@ -191,11 +209,16 @@ void AccumulatorStack::forward_update_incremental(
     assert(begin < accumulators<FeatureSet>().size());
     assert((accumulators<FeatureSet>()[begin].template acc<Dimensions>()).computed[Perspective]);
 
+    static_assert(std::is_same_v<FeatureSet, PSQFeatureSet> || std::is_same_v<FeatureSet, ThreatFeatureSet>,
+                  "Invalid Feature Set Type");
+
+    std::size_t s = std::is_same_v<FeatureSet, PSQFeatureSet> ? psq_size : threat_size;
+
     const Square ksq = pos.square<KING>(Perspective);
 
-    for (std::size_t next = begin + 1; next < size; next++)
+    for (std::size_t next = begin + 1; next < s; next++)
     {
-        if (std::is_same_v<FeatureSet, PSQFeatureSet> && next + 1 < size)
+        if (std::is_same_v<FeatureSet, PSQFeatureSet> && next + 1 < s)
         {
             DirtyPiece& dp1 = psq_accumulators[next].diff;
             DirtyPiece& dp2 = psq_accumulators[next + 1].diff;
@@ -232,9 +255,14 @@ void AccumulatorStack::backward_update_incremental(
     assert(end < size);
     assert((latest<FeatureSet>().template acc<Dimensions>()).computed[Perspective]);
 
+    static_assert(std::is_same_v<FeatureSet, PSQFeatureSet> || std::is_same_v<FeatureSet, ThreatFeatureSet>,
+                  "Invalid Feature Set Type");
+
+    std::size_t s = std::is_same_v<FeatureSet, PSQFeatureSet> ? psq_size : threat_size;
+
     const Square ksq = pos.square<KING>(Perspective);
 
-    for (std::int64_t next = std::int64_t(size) - 2; next >= std::int64_t(end); next--)
+    for (std::int64_t next = std::int64_t(s) - 2; next >= std::int64_t(end); next--)
         update_accumulator_incremental<Perspective, false>(featureTransformer, ksq,
                                                            mut_accumulators<FeatureSet>()[next],
                                                            accumulators<FeatureSet>()[next + 1]);
