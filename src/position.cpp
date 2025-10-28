@@ -957,9 +957,7 @@ DirtyBoardData Position::do_move(Move                      m,
 
     dts.ksq = square<KING>(us);
 
-    // This is somwhat hacky, I tried something cleaner but it didnt work and I couldnt figure out why, 
-    // if this passes ill try to get something cleaner to work
-    st->dirtyThreats = dts.list.size() || (Eval::NNUE::Features::FullThreats::OrientTBL[dts.ksq] != Eval::NNUE::Features::FullThreats::OrientTBL[dts.prevKsq]);
+    st->dirtyThreats = dts.list.size() || (Eval::NNUE::Features::FullThreats::OrientTBL[WHITE][dts.ksq] != Eval::NNUE::Features::FullThreats::OrientTBL[WHITE][dts.prevKsq]);
 
     assert(pos_is_ok());
 
@@ -1034,6 +1032,12 @@ void Position::undo_move(Move m) {
     assert(pos_is_ok());
 }
 
+template<bool put_piece>
+void addDirtyThreat(DirtyThreats* const dts, Piece pc, Piece threatenedPc, Square s, Square threatenedSq) {
+    if (type_of(threatenedPc) != KING || color_of(pc) == color_of(threatenedPc))
+        dts->list.push_back({pc, threatenedPc, s, threatenedSq, put_piece});
+}
+
 template<bool put_piece, bool compute_ray>
 void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
     // Add newly threatened pieces
@@ -1074,7 +1078,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(threatened_sq != s);
         assert(threatened_pc);
 
-        dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
+        addDirtyThreat<put_piece>(dts, pc, threatened_pc, s, threatened_sq);
     }
 
     Bitboard sliders = (pieces(ROOK, QUEEN) & rAttacks) | (pieces(BISHOP, QUEEN) & bAttacks);
@@ -1098,10 +1102,10 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             Square threatened_sq = lsb(threatened);
 
             Piece threatened_pc = piece_on(threatened_sq);
-            dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
+            addDirtyThreat<!put_piece>(dts, slider, threatened_pc, slider_sq, threatened_sq);
         }
 
-        dts->list.push_back({slider, pc, slider_sq, s, put_piece});
+        addDirtyThreat<put_piece>(dts, slider, pc, slider_sq, s);
     }
 
     // Add threats of sliders that were already threatening s,
@@ -1115,7 +1119,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(src_sq != s);
         assert(src_pc != NO_PIECE);
 
-        dts->list.push_back({src_pc, pc, src_sq, s, put_piece});
+        addDirtyThreat<put_piece>(dts, src_pc, pc, src_sq, s);
     }
 }
 
