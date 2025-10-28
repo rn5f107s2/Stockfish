@@ -535,7 +535,7 @@ void Search::Worker::do_move(
 
     DirtyBoardData dirtyBoardData = pos.do_move(move, st, givesCheck, &tt);
 
-    accumulatorStack.push(dirtyBoardData);
+    accumulatorStack.push(dirtyBoardData, pos.dirtyThreats());
 
     if (ss != nullptr)
     {
@@ -550,7 +550,7 @@ void Search::Worker::do_move(
 void Search::Worker::do_null_move(Position& pos, StateInfo& st) { pos.do_null_move(st, tt); }
 
 void Search::Worker::undo_move(Position& pos, const Move move) {
-    accumulatorStack.pop();
+    accumulatorStack.pop(pos.dirtyThreats());
 
     pos.undo_move(move);
 }

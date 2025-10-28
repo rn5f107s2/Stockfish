@@ -125,9 +125,7 @@ void AccumulatorStack::push(const DirtyBoardData& dirtyBoardData, bool pushThrea
     assert(psq_size + 1 < psq_accumulators.size());
     psq_accumulators[psq_size++].reset(dirtyBoardData.dp);
 
-    bool refresh = Features::FullThreats::OrientTBL[WHITE][dirtyBoardData.dts.ksq] != Features::FullThreats::OrientTBL[WHITE][dirtyBoardData.dts.prevKsq];
-
-    if (pushThreats || refresh) {
+    if (pushThreats) {
         assert(threat_size + 1 < threat_accumulators.size());
 
         threat_accumulators[threat_size++].reset(dirtyBoardData.dts);
@@ -138,9 +136,7 @@ void AccumulatorStack::pop(bool popThreats) noexcept {
     assert(psq_size > 1);
     psq_size--;
 
-    bool refresh = Features::FullThreats::OrientTBL[WHITE][latest<Features::FullThreats>().diff.ksq] != Features::FullThreats::OrientTBL[WHITE][latest<Features::FullThreats>().diff.prevKsq];
-
-    if (popThreats || refresh) {
+    if (popThreats) {
         assert(threat_size > 1);
 
         threat_size--;
@@ -262,13 +258,14 @@ void AccumulatorStack::backward_update_incremental(
   const std::size_t                     end) noexcept {
 
     assert(end < accumulators<FeatureSet>().size());
-    assert(end < size);
     assert((latest<FeatureSet>().template acc<Dimensions>()).computed[Perspective]);
 
     static_assert(std::is_same_v<FeatureSet, PSQFeatureSet> || std::is_same_v<FeatureSet, ThreatFeatureSet>,
                   "Invalid Feature Set Type");
 
     std::size_t s = std::is_same_v<FeatureSet, PSQFeatureSet> ? psq_size : threat_size;
+
+    assert(end < s);
 
     const Square ksq = pos.square<KING>(Perspective);
 
