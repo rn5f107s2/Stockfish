@@ -125,16 +125,26 @@ void AccumulatorStack::push(const DirtyBoardData& dirtyBoardData, bool pushThrea
     assert(psq_size + 1 < psq_accumulators.size());
     psq_accumulators[psq_size++].reset(dirtyBoardData.dp);
 
-    if (pushThreats)
+    bool refresh = Features::FullThreats::OrientTBL[WHITE][dirtyBoardData.dts.ksq] != Features::FullThreats::OrientTBL[WHITE][dirtyBoardData.dts.prevKsq];
+
+    if (pushThreats || refresh) {
+        assert(threat_size + 1 < threat_accumulators.size());
+
         threat_accumulators[threat_size++].reset(dirtyBoardData.dts);
+    }
 }
 
 void AccumulatorStack::pop(bool popThreats) noexcept {
     assert(psq_size > 1);
     psq_size--;
 
-    if (popThreats)
+    bool refresh = Features::FullThreats::OrientTBL[WHITE][latest<Features::FullThreats>().diff.ksq] != Features::FullThreats::OrientTBL[WHITE][latest<Features::FullThreats>().diff.prevKsq];
+
+    if (popThreats || refresh) {
+        assert(threat_size > 1);
+
         threat_size--;
+    }
 }
 
 template<IndexType Dimensions>

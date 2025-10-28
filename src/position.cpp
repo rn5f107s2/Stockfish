@@ -957,7 +957,7 @@ DirtyBoardData Position::do_move(Move                      m,
 
     dts.ksq = square<KING>(us);
 
-    st->dirtyThreats = dts.list.size() || (file_of(dts.ksq) > FILE_D) != (file_of(dts.prevKsq) > FILE_D);
+    st->dirtyThreats = dts.list.size();
 
     assert(pos_is_ok());
 
