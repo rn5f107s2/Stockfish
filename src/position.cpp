@@ -959,7 +959,7 @@ DirtyBoardData Position::do_move(Move                      m,
 
     // This is somwhat hacky, I tried something cleaner but it didnt work and I couldnt figure out why, 
     // if this passes ill try to get something cleaner to work
-    st->dirtyThreats = dts.list.size() || (file_of(dts.ksq) > FILE_D != file_of(dts.prevKsq) > FILE_D);
+    st->dirtyThreats = dts.list.size() || (Eval::NNUE::Features::FullThreats::OrientTBL[dts.ksq] != Eval::NNUE::Features::FullThreats::OrientTBL[dts.prevKsq]);
 
     assert(pos_is_ok());
 
