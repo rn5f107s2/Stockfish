@@ -957,7 +957,7 @@ DirtyBoardData Position::do_move(Move                      m,
 
     dts.ksq = square<KING>(us);
 
-    st->dirtyThreats = dts.list.size() || (Eval::NNUE::Features::FullThreats::OrientTBL[WHITE][dts.ksq] != Eval::NNUE::Features::FullThreats::OrientTBL[WHITE][dts.prevKsq]);
+    st->dirtyThreats = dts.list.size() || (Eval::NNUE::Features::FullThreats::OrientTBL[~sideToMove][dts.ksq] != Eval::NNUE::Features::FullThreats::OrientTBL[~sideToMove][dts.prevKsq]);
 
     assert(pos_is_ok());
 
