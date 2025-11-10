@@ -324,6 +324,7 @@ struct DirtyThreats {
     DirtyThreatList list;
     Color           us;
     Square          prevKsq, ksq;
+    uint8_t         activeThreats;
 
     Bitboard threatenedSqs, threateningSqs;
 };

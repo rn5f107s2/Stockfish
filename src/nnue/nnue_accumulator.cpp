@@ -206,6 +206,18 @@ void AccumulatorStack::forward_update_incremental(
 
     const Square ksq = pos.square<KING>(Perspective);
 
+    if constexpr (std::is_same_v<FeatureSet, ThreatFeatureSet>) {
+        size_t approxUpdateCost = 0;
+
+        for (std::size_t next = begin + 1; next < size; next++)
+            approxUpdateCost += threat_accumulators[next].diff.list.size();
+
+        if (approxUpdateCost > threat_accumulators[size - 1].diff.activeThreats) {
+            update_threats_accumulator_full<Perspective, Dimensions>(featureTransformer, pos, mut_accumulators<FeatureSet>()[size - 1]);
+            return;
+        }
+    }
+
     for (std::size_t next = begin + 1; next < size; next++)
     {
         if (next + 1 < size)

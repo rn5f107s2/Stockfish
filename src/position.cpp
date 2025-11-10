@@ -342,6 +342,7 @@ void Position::set_state() const {
     st->pawnKey                                   = Zobrist::noPawns;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
     st->checkersBB = attackers_to(square<KING>(sideToMove)) & pieces(~sideToMove);
+    st->activeThreats = 0;
 
     set_check_info();
 
@@ -351,9 +352,13 @@ void Position::set_state() const {
         Piece  pc = piece_on(s);
         st->key ^= Zobrist::psq[pc][s];
 
-        if (type_of(pc) == PAWN)
-            st->pawnKey ^= Zobrist::psq[pc][s];
+        Bitboard attacks;
 
+        if (type_of(pc) == PAWN) 
+        {
+            st->pawnKey ^= Zobrist::psq[pc][s];
+            attacks = attacks_bb<PAWN>(s, color_of(pc));
+        }
         else
         {
             st->nonPawnKey[color_of(pc)] ^= Zobrist::psq[pc][s];
@@ -365,7 +370,11 @@ void Position::set_state() const {
                 if (type_of(pc) <= BISHOP)
                     st->minorPieceKey ^= Zobrist::psq[pc][s];
             }
+
+            attacks = attacks_bb(pc, s, pieces());
         }
+
+        st->activeThreats += popcount(attacks & pieces());
     }
 
     if (st->epSquare != SQ_NONE)
@@ -971,6 +980,8 @@ DirtyBoardData Position::do_move(Move                      m,
     assert(dp.from != SQ_NONE);
     assert(!(dp.add_sq != SQ_NONE) ^ (m.type_of() == PROMOTION || m.type_of() == CASTLING));
 
+    dts.activeThreats = st->activeThreats;
+
     return {dp, dts};
 }
 
@@ -1039,11 +1050,15 @@ void Position::undo_move(Move m) {
 
 template<bool PutPiece>
 inline void add_dirty_threat(
-  DirtyThreats* const dts, Piece pc, Piece threatened, Square s, Square threatenedSq) {
-    if (PutPiece)
+  DirtyThreats* const dts, Piece pc, Piece threatened, Square s, Square threatenedSq, StateInfo* st) {
+    if constexpr (PutPiece)
     {
         dts->threatenedSqs |= square_bb(threatenedSq);
         dts->threateningSqs |= square_bb(s);
+
+        st->activeThreats++;
+    } else {
+        st->activeThreats--;
     }
 
     dts->list.push_back({pc, threatened, s, threatenedSq, PutPiece});
@@ -1089,7 +1104,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(threatened_sq != s);
         assert(threatened_pc);
 
-        add_dirty_threat<PutPiece>(dts, pc, threatened_pc, s, threatened_sq);
+        add_dirty_threat<PutPiece>(dts, pc, threatened_pc, s, threatened_sq, st);
     }
 
     Bitboard sliders = (pieces(ROOK, QUEEN) & rAttacks) | (pieces(BISHOP, QUEEN) & bAttacks);
@@ -1113,10 +1128,10 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             Square threatened_sq = lsb(threatened);
 
             Piece threatened_pc = piece_on(threatened_sq);
-            add_dirty_threat<!PutPiece>(dts, slider, threatened_pc, slider_sq, threatened_sq);
+            add_dirty_threat<!PutPiece>(dts, slider, threatened_pc, slider_sq, threatened_sq, st);
         }
 
-        add_dirty_threat<PutPiece>(dts, slider, pc, slider_sq, s);
+        add_dirty_threat<PutPiece>(dts, slider, pc, slider_sq, s, st);
     }
 
     // Add threats of sliders that were already threatening s,
@@ -1130,7 +1145,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(src_sq != s);
         assert(src_pc != NO_PIECE);
 
-        add_dirty_threat<PutPiece>(dts, src_pc, pc, src_sq, s);
+        add_dirty_threat<PutPiece>(dts, src_pc, pc, src_sq, s, st);
     }
 }
 

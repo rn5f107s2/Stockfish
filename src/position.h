@@ -49,6 +49,7 @@ struct StateInfo {
     int    rule50;
     int    pliesFromNull;
     Square epSquare;
+    uint8_t activeThreats;
 
     // Not copied when making a move (will be recomputed anyhow)
     Key        key;
