@@ -160,6 +160,12 @@ using CorrectionHistory = typename Detail::CorrHistTypedef<T>::type;
 
 using TTMoveHistory = StatsEntry<std::int16_t, 8192>;
 
+enum HistoryType {
+    MAIN_HIST, PAWN_HIST, CONT_HIST1, CONT_HIST2, CONT_HIST3, CONT_HIST4, CONT_HIST5, CONT_HIST6, HIST_NB
+};
+
+using HistoryWeightHistory = Stats<std::int16_t, 8192, HIST_NB>;
+
 }  // namespace Stockfish
 
 #endif  // #ifndef HISTORY_H_INCLUDED

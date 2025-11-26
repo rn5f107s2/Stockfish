@@ -21,6 +21,7 @@
 #include <cassert>
 #include <limits>
 #include <utility>
+#include <iostream>
 
 #include "bitboard.h"
 #include "misc.h"
@@ -88,7 +89,8 @@ MovePicker::MovePicker(const Position&              p,
                        const CapturePieceToHistory* cph,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
-                       int                          pl) :
+                       int                          pl,
+                       const HistoryWeightHistory*  hwh) :
     pos(p),
     mainHistory(mh),
     lowPlyHistory(lph),
@@ -97,7 +99,8 @@ MovePicker::MovePicker(const Position&              p,
     pawnHistory(ph),
     ttMove(ttm),
     depth(d),
-    ply(pl) {
+    ply(pl),
+    historyWeightHistory(hwh) {
 
     if (pos.checkers())
         stage = EVASION_TT + !(ttm && pos.pseudo_legal(ttm));
@@ -158,13 +161,13 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         else if constexpr (Type == QUIETS)
         {
             // histories
-            m.value = 2 * (*mainHistory)[us][m.raw()];
-            m.value += 2 * (*pawnHistory)[pawn_history_index(pos)][pc][to];
-            m.value += (*continuationHistory[0])[pc][to];
-            m.value += (*continuationHistory[1])[pc][to];
-            m.value += (*continuationHistory[2])[pc][to];
-            m.value += (*continuationHistory[3])[pc][to];
-            m.value += (*continuationHistory[5])[pc][to];
+            m.value = (((32768 - 5599) + (historyWeightHistory[0][0])) * (*mainHistory)[us][m.raw()]) / 16384;
+            m.value += ((32768 - 5603) + (historyWeightHistory[0][1])) * (*pawnHistory)[pawn_history_index(pos)][pc][to] / 16384;
+            m.value += ((16384 - 3242) + (*historyWeightHistory)[CONT_HIST1]) * (*continuationHistory[0])[pc][to] / 16384;
+            m.value += ((16384 - 2396) + (*historyWeightHistory)[CONT_HIST2]) * (*continuationHistory[1])[pc][to] / 16384;
+            m.value += ((16384 - 1325) + (*historyWeightHistory)[CONT_HIST3]) * (*continuationHistory[2])[pc][to] / 16384;
+            m.value += ((16384 - 2177) + (*historyWeightHistory)[CONT_HIST4]) * (*continuationHistory[3])[pc][to] / 16384;
+            m.value += ((16384 -  986) + (*historyWeightHistory)[CONT_HIST5]) * (*continuationHistory[5])[pc][to] / 16384;
 
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
