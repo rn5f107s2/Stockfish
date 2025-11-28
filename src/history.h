@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <iostream>
 #include <type_traits>  // IWYU pragma: keep
 
 #include "misc.h"
@@ -51,6 +52,15 @@ inline int pawn_history_index(const Position& pos) {
 inline uint16_t pawn_correction_history_index(const Position& pos) { return pos.pawn_key(); }
 
 inline uint16_t minor_piece_index(const Position& pos) { return pos.minor_piece_key(); }
+
+inline uint16_t pattern_index(const Position& pos, Square s) {
+#ifdef USE_PEXT
+    return   (pext(PseudoAttacks[KING][s] & pos.pieces( pos.side_to_move()), PseudoAttacks[KING][s]) << 8)
+           |  pext(PseudoAttacks[KING][s] & pos.pieces(~pos.side_to_move()), PseudoAttacks[KING][s]);
+#else
+    #error "If this is not terrible I will find a way to implement this pextless"
+#endif
+}
 
 template<Color c>
 inline uint16_t non_pawn_index(const Position& pos) {
@@ -117,6 +127,9 @@ using ContinuationHistory = MultiArray<PieceToHistory, PIECE_NB, SQUARE_NB>;
 
 // PawnHistory is addressed by the pawn structure and a move's [piece][to]
 using PawnHistory = Stats<std::int16_t, 8192, PAWN_HISTORY_SIZE, PIECE_NB, SQUARE_NB>;
+
+// PatternHistory is adressed by the moves to squares pattern and the moving piece type
+using PatternHistory = Stats<std::int16_t, 8192, 65536, PIECE_TYPE_NB>;
 
 // Correction histories record differences between the static evaluation of
 // positions and their search score. It is used to improve the static evaluation
