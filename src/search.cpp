@@ -648,7 +648,7 @@ Value Search::Worker::search(
     ss->inCheck   = pos.checkers();
     priorCapture  = pos.captured_piece();
     Color us      = pos.side_to_move();
-    ss->moveCount = 0;
+    ss->moveCount = ss->iir = 0;
     bestValue     = -VALUE_INFINITE;
     maxValue      = VALUE_INFINITE;
 
@@ -751,6 +751,14 @@ Value Search::Worker::search(
         depth++;
     if (priorReduction >= 2 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 173)
         depth--;
+
+    if (   (ss-1)->iir 
+        && (ss-1)->moveCount == 1
+        && ss->ttHit 
+        && (ttData.bound & BOUND_LOWER)
+        && ttData.depth > depth - 5
+        && ttData.value <= alpha)
+        depth++;
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && !excludedMove && ttData.depth > depth - (ttData.value <= beta)
@@ -926,7 +934,9 @@ Value Search::Worker::search(
     // Step 10. Internal iterative reductions
     // At sufficient depth, reduce depth for PV/Cut nodes without a TTMove.
     // (*Scaler) Making IIR more aggressive scales poorly.
-    if (!allNode && depth >= 6 && !ttData.move && priorReduction <= 3)
+    ss->iir = !allNode && depth >= 6 && !ttData.move && priorReduction <= 3;
+
+    if (ss->iir)
         depth--;
 
     // Step 11. ProbCut
