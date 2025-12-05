@@ -599,6 +599,11 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
+int rdv = 2047;
+int riv = 1024;
+
+TUNE(SetRange(1024, 3072), rdv);
+TUNE(SetRange(0, 2048), riv);
 
 // Main search function for both PV and non-PV nodes
 template<NodeType nodeType>
@@ -747,10 +752,11 @@ Value Search::Worker::search(
     opponentWorsening = ss->staticEval > -(ss - 1)->staticEval;
 
     // Hindsight adjustment of reductions based on static evaluation difference.
-    if (priorReduction >= 3 && !opponentWorsening)
-        depth++;
-    if (priorReduction >= 2 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 173)
-        depth--;
+    if (priorReduction >= 3072 && !opponentWorsening)
+        depth -= ((priorReduction % 1024) - rdv) / 1024;
+
+    if (priorReduction >= 2048 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 173)
+        depth -= ((priorReduction % 1024) + riv) / 1024;
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && !excludedMove && ttData.depth > depth - (ttData.value <= beta)
@@ -926,7 +932,7 @@ Value Search::Worker::search(
     // Step 10. Internal iterative reductions
     // At sufficient depth, reduce depth for PV/Cut nodes without a TTMove.
     // (*Scaler) Making IIR more aggressive scales poorly.
-    if (!allNode && depth >= 6 && !ttData.move && priorReduction <= 3)
+    if (!allNode && depth >= 6 && !ttData.move && priorReduction / 1024 <= 3)
         depth--;
 
     // Step 11. ProbCut
@@ -1228,9 +1234,10 @@ moves_loop:  // When in check, search starts here
             // beyond the first move depth.
             // To prevent problems when the max value is less than the min value,
             // std::clamp has been replaced by a more robust implementation.
-            Depth d = std::max(1, std::min(newDepth - r / 1024, newDepth + 2)) + PvNode;
+            r = std::min((newDepth - 1) * 1024, std::max(r, -2048));
+            Depth d = newDepth - r / 1024 + PvNode;
 
-            ss->reduction = newDepth - d;
+            ss->reduction = PvNode ? (r / 1024 - 1) * 1024 : r;
             value         = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
             ss->reduction = 0;
 
