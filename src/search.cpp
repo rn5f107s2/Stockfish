@@ -755,7 +755,7 @@ Value Search::Worker::search(
     if (   (ss-1)->iir 
         && (ss-1)->moveCount == 1
         && ss->ttHit 
-        && (ttData.bound & BOUND_LOWER)
+        && (ttData.bound & BOUND_UPPER)
         && ttData.depth > depth - 5
         && ttData.value <= alpha)
         depth++;
