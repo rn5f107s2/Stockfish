@@ -599,12 +599,6 @@ void Search::Worker::clear() {
     refreshTable.clear(networks[numaAccessToken]);
 }
 
-int rdv = 2047;
-int riv = 1024;
-
-TUNE(SetRange(1024, 3072), rdv);
-TUNE(SetRange(0, 2048), riv);
-
 // Main search function for both PV and non-PV nodes
 template<NodeType nodeType>
 Value Search::Worker::search(
@@ -753,10 +747,10 @@ Value Search::Worker::search(
 
     // Hindsight adjustment of reductions based on static evaluation difference.
     if (priorReduction >= 3072 && !opponentWorsening)
-        depth -= ((priorReduction % 1024) - rdv) / 1024;
+        depth -= ((priorReduction % 1024) - 1963) / 1024;
 
     if (priorReduction >= 2048 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 173)
-        depth -= ((priorReduction % 1024) + riv) / 1024;
+        depth -= ((priorReduction % 1024) + 1001) / 1024;
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && !excludedMove && ttData.depth > depth - (ttData.value <= beta)
