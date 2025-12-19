@@ -188,7 +188,7 @@ void Search::Worker::start_searching() {
 
     main_manager()->tm.init(limits, rootPos.side_to_move(), rootPos.game_ply(), options,
                             main_manager()->originalTimeAdjust);
-    tt.new_search();
+    tt.age();
 
     if (rootMoves.empty())
     {
@@ -1937,12 +1937,18 @@ void SearchManager::check_time(Search::Worker& worker) {
 
     TimePoint elapsed = tm.elapsed([&worker]() { return worker.threads.nodes_searched(); });
     TimePoint tick    = worker.limits.startTime + elapsed;
+    TimePoint ageTime = tm.optimum() / 3 * 2;
 
     if (tick - lastInfoTime >= 1000)
     {
         lastInfoTime = tick;
         dbg_print();
     }
+
+    if (   worker.limits.use_time_management()
+        && elapsed > ageTime
+        && lastInfoTime - worker.limits.startTime <= ageTime)
+        worker.tt.age();
 
     // We should not stop pondering until told so by the GUI
     if (ponder)

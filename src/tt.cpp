@@ -207,7 +207,7 @@ int TranspositionTable::hashfull(int maxAge) const {
 }
 
 
-void TranspositionTable::new_search() {
+void TranspositionTable::age() {
     // increment by delta to keep lower bits as is
     generation8 += GENERATION_DELTA;
 }

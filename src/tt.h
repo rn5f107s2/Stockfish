@@ -89,7 +89,7 @@ class TranspositionTable {
       const;  // Approximate what fraction of entries (permille) have been written to during this root search
 
     void
-    new_search();  // This must be called at the beginning of each root search to track entry aging
+    age();  // This must be called at the beginning of each root search to track entry aging
     uint8_t generation() const;  // The current age, used when writing new data to the TT
     std::tuple<bool, TTData, TTWriter>
     probe(const Key key) const;  // The main method, whose retvals separate local vs global objects
