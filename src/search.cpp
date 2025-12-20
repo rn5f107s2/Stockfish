@@ -1938,11 +1938,25 @@ void SearchManager::check_time(Search::Worker& worker) {
     TimePoint elapsed = tm.elapsed([&worker]() { return worker.threads.nodes_searched(); });
     TimePoint tick    = worker.limits.startTime + elapsed;
 
+    TimePoint lastElapsed    = lastInfoTime - worker.limits.startTime;
+    TimePoint storeIncTime   = tm.optimum() / 2;
+    TimePoint replaceIncTime = tm.optimum() * 3 / 4;
+
     if (tick - lastInfoTime >= 1000)
     {
         lastInfoTime = tick;
         dbg_print();
     }
+
+    if (   worker.limits.use_time_management()
+        && elapsed > storeIncTime
+        && lastElapsed <= storeIncTime)
+        worker.tt.increase_store_gen();
+
+    if (   worker.limits.use_time_management()
+        && elapsed > replaceIncTime
+        && lastElapsed <= replaceIncTime)
+        worker.tt.increase_replace_gen();
 
     // We should not stop pondering until told so by the GUI
     if (ponder)

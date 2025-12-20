@@ -58,7 +58,7 @@ struct TTEntry {
     bool is_occupied() const;
     void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8);
     // The returned age is a multiple of TranspositionTable::GENERATION_DELTA
-    uint8_t relative_age(const uint8_t generation8) const;
+    uint8_t relative_age(const uint8_t generation8, uint8_t offset = 0) const;
 
    private:
     friend class TranspositionTable;
@@ -81,7 +81,7 @@ static constexpr int GENERATION_DELTA = (1 << GENERATION_BITS);
 // cycle length
 static constexpr int GENERATION_CYCLE = 255 + GENERATION_DELTA;
 // mask to pull out generation number
-static constexpr int GENERATION_MASK = (0xFF << GENERATION_BITS) & 0xFF;
+static constexpr int GENERATION_MASK = (0xFF << (GENERATION_BITS + 1)) & 0xFF;
 
 // DEPTH_ENTRY_OFFSET exists because 1) we use `bool(depth8)` as the occupancy check, but
 // 2) we need to store negative depths for QS. (`depth8` is the only field with "spare bits":
@@ -115,13 +115,13 @@ void TTEntry::save(
 }
 
 
-uint8_t TTEntry::relative_age(const uint8_t generation8) const {
+uint8_t TTEntry::relative_age(const uint8_t generation8, const uint8_t offset) const {
     // Due to our packed storage format for generation and its cyclic
     // nature we add GENERATION_CYCLE (256 is the modulus, plus what
     // is needed to keep the unrelated lowest n bits from affecting
     // the result) to calculate the entry age correctly even after
     // generation8 overflows into the next cycle.
-    return (GENERATION_CYCLE + generation8 - genBound8) & GENERATION_MASK;
+    return ((GENERATION_CYCLE + generation8 - (genBound8 + offset)) & GENERATION_MASK);
 }
 
 
@@ -208,10 +208,20 @@ int TranspositionTable::hashfull(int maxAge) const {
 
 
 void TranspositionTable::new_search() {
-    // increment by delta to keep lower bits as is
+    // increment by delta to keep lower bits as is and ensure generation8 is a multiple of 2 * GENERATION_DELTA
+    generation8 += 2 * GENERATION_DELTA;
+    generation8 = (generation8 >> (GENERATION_BITS + 1)) << (GENERATION_BITS + 1);
+
+    generation8Offset = 0;
+}
+
+void TranspositionTable::increase_replace_gen() {
     generation8 += GENERATION_DELTA;
 }
 
+void TranspositionTable::increase_store_gen() {
+    generation8Offset = GENERATION_DELTA;
+}
 
 uint8_t TranspositionTable::generation() const { return generation8; }
 
@@ -236,8 +246,8 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     // Find an entry to be replaced according to the replacement strategy
     TTEntry* replace = tte;
     for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8)
-            > tte[i].depth8 - tte[i].relative_age(generation8))
+        if (replace->depth8 - replace->relative_age(generation8, generation8Offset)
+            > tte[i].depth8 - tte[i].relative_age(generation8, generation8Offset))
             replace = &tte[i];
 
     return {false,

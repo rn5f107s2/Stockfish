@@ -88,8 +88,9 @@ class TranspositionTable {
     int  hashfull(int maxAge = 0)
       const;  // Approximate what fraction of entries (permille) have been written to during this root search
 
-    void
-    new_search();  // This must be called at the beginning of each root search to track entry aging
+    void new_search();  // This must be called at the beginning of each root search to track entry aging
+    void increase_replace_gen();
+    void increase_store_gen();
     uint8_t generation() const;  // The current age, used when writing new data to the TT
     std::tuple<bool, TTData, TTWriter>
     probe(const Key key) const;  // The main method, whose retvals separate local vs global objects
@@ -103,6 +104,7 @@ class TranspositionTable {
     Cluster* table = nullptr;
 
     uint8_t generation8 = 0;  // Size must be not bigger than TTEntry::genBound8
+    uint8_t generation8Offset = 0;
 };
 
 }  // namespace Stockfish
