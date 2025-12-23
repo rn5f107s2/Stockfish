@@ -709,7 +709,7 @@ Value Search::Worker::search(
 
     // Step 6. Static evaluation of the position
     Value      unadjustedStaticEval = VALUE_NONE;
-    const auto correctionValue      = correction_value(*this, pos, ss);
+    const auto correctionValue      = ss->leafCorrection = correction_value(*this, pos, ss);
     // Skip early pruning when in check
     if (ss->inCheck)
         ss->staticEval = eval = (ss - 2)->staticEval;
@@ -726,8 +726,11 @@ Value Search::Worker::search(
 
         // ttValue can be used as a better position evaluation
         if (is_valid(ttData.value)
-            && (ttData.bound & (ttData.value > eval ? BOUND_LOWER : BOUND_UPPER)))
+            && (ttData.bound & (ttData.value > eval ? BOUND_LOWER : BOUND_UPPER))) 
+        {
             eval = ttData.value;
+            ss->leafCorrection = 0;
+        }
     }
     else
     {
@@ -786,11 +789,11 @@ Value Search::Worker::search(
                 pos.undo_move(ttData.move);
 
                 // Check that the ttValue after the tt move would also trigger a cutoff
-                if (!is_valid(ttDataNext.value))
+                if (!is_valid(ttDataNext.value) || (ttData.value >= beta) == (-ttDataNext.value >= beta))
+                {
+                    ss->leafCorrection = 0;
                     return ttData.value;
-
-                if ((ttData.value >= beta) == (-ttDataNext.value >= beta))
-                    return ttData.value;
+                }
             }
             else
                 return ttData.value;
@@ -904,6 +907,8 @@ Value Search::Worker::search(
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && !is_win(nullValue))
         {
+            ss->leafCorrection = (ss + 1)->leafCorrection;
+
             if (nmpMinPly || depth < 16)
                 return nullValue;
 
@@ -916,6 +921,8 @@ Value Search::Worker::search(
             Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, false);
 
             nmpMinPly = 0;
+
+            ss->leafCorrection = (ss + 1)->leafCorrection;
 
             if (v >= beta)
                 return nullValue;
@@ -972,8 +979,11 @@ Value Search::Worker::search(
                 ttWriter.write(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER,
                                probCutDepth + 1, move, unadjustedStaticEval, tt.generation());
 
-                if (!is_decisive(value))
+                if (!is_decisive(value)) 
+                {
+                    ss->leafCorrection = (ss + 1)->leafCorrection;
                     return value - (probCutBeta - beta);
+                }
             }
         }
     }
@@ -984,7 +994,10 @@ moves_loop:  // When in check, search starts here
     probCutBeta = beta + 418;
     if ((ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 4 && ttData.value >= probCutBeta
         && !is_decisive(beta) && is_valid(ttData.value) && !is_decisive(ttData.value))
+    {
+        ss->leafCorrection = 0;
         return probCutBeta;
+    }
 
     const PieceToHistory* contHist[] = {
       (ss - 1)->continuationHistory, (ss - 2)->continuationHistory, (ss - 3)->continuationHistory,
@@ -1355,6 +1368,8 @@ moves_loop:  // When in check, search starts here
         {
             bestValue = value;
 
+            ss->leafCorrection = (ss + 1)->leafCorrection;
+
             if (value + inc > alpha)
             {
                 bestMove = move;
@@ -1469,7 +1484,7 @@ moves_loop:  // When in check, search starts here
     if (!ss->inCheck && !(bestMove && pos.capture(bestMove))
         && (bestValue > ss->staticEval) == bool(bestMove))
     {
-        auto bonus = std::clamp(int(bestValue - ss->staticEval) * depth / (bestMove ? 10 : 8),
+        auto bonus = std::clamp(int(bestValue - ss->leafCorrection / 131072 - ss->staticEval) * depth / (bestMove ? 10 : 8),
                                 -CORRECTION_HISTORY_LIMIT / 4, CORRECTION_HISTORY_LIMIT / 4);
         update_correction_history(pos, ss, *this, bonus);
     }
@@ -1521,7 +1536,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
 
     bestMove    = Move::none();
     ss->inCheck = pos.checkers();
-    moveCount   = 0;
+    moveCount   = ss->leafCorrection = 0;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && selDepth < ss->ply + 1)
@@ -1554,7 +1569,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         bestValue = futilityBase = -VALUE_INFINITE;
     else
     {
-        const auto correctionValue = correction_value(*this, pos, ss);
+        const auto correctionValue = ss->leafCorrection = correction_value(*this, pos, ss);
 
         if (ss->ttHit)
         {
@@ -1671,6 +1686,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         // Step 8. Check for a new best move
         if (value > bestValue)
         {
+            ss->leafCorrection = (ss+1)->leafCorrection;
             bestValue = value;
 
             if (value > alpha)

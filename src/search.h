@@ -69,6 +69,7 @@ struct Stack {
     Move                        currentMove;
     Move                        excludedMove;
     Value                       staticEval;
+    Value                       leafCorrection;
     int                         statScore;
     int                         moveCount;
     bool                        inCheck;
