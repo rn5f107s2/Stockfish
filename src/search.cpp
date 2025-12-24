@@ -628,6 +628,7 @@ Value Search::Worker::search(
     if (!rootNode && alpha < VALUE_DRAW && pos.upcoming_repetition(ss->ply))
     {
         alpha = value_draw(nodes);
+        ss->leafCorrection = 0;
         if (alpha >= beta)
             return alpha;
     }
@@ -907,7 +908,7 @@ Value Search::Worker::search(
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && !is_win(nullValue))
         {
-            ss->leafCorrection = (ss + 1)->leafCorrection;
+            ss->leafCorrection = -(ss + 1)->leafCorrection;
 
             if (nmpMinPly || depth < 16)
                 return nullValue;
@@ -922,7 +923,7 @@ Value Search::Worker::search(
 
             nmpMinPly = 0;
 
-            ss->leafCorrection = (ss + 1)->leafCorrection;
+            ss->leafCorrection = -(ss + 1)->leafCorrection;
 
             if (v >= beta)
                 return nullValue;
@@ -981,7 +982,7 @@ Value Search::Worker::search(
 
                 if (!is_decisive(value)) 
                 {
-                    ss->leafCorrection = (ss + 1)->leafCorrection;
+                    ss->leafCorrection = -(ss + 1)->leafCorrection;
                     return value - (probCutBeta - beta);
                 }
             }
@@ -1368,7 +1369,7 @@ moves_loop:  // When in check, search starts here
         {
             bestValue = value;
 
-            ss->leafCorrection = (ss + 1)->leafCorrection;
+            ss->leafCorrection = -(ss + 1)->leafCorrection;
 
             if (value + inc > alpha)
             {
@@ -1686,7 +1687,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         // Step 8. Check for a new best move
         if (value > bestValue)
         {
-            ss->leafCorrection = (ss+1)->leafCorrection;
+            ss->leafCorrection = -(ss + 1)->leafCorrection;
             bestValue = value;
 
             if (value > alpha)
