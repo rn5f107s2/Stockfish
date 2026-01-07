@@ -344,10 +344,13 @@ void ThreadPool::start_thinking(const OptionsMap&  options,
     main_thread()->start_searching();
 }
 
-Thread* ThreadPool::get_best_thread() const {
-
+Thread* ThreadPool::get_best_thread() {
     Thread* bestThread = threads.front().get();
     Value   minScore   = VALUE_NONE;
+
+    const TimeManagement& tm = main_manager()->tm;
+
+    TimePoint mainThreadLastTime = tm.elapsed_time(main_thread()->worker->lastCompleteDepth);
 
     std::unordered_map<Move, int64_t, Move::MoveHash> votes(
       2 * std::min(size(), bestThread->worker->rootMoves.size()));
@@ -357,12 +360,14 @@ Thread* ThreadPool::get_best_thread() const {
         minScore = std::min(minScore, th->worker->rootMoves[0].score);
 
     // Vote according to score and depth, and select the best thread
-    auto thread_voting_value = [minScore](Thread* th) {
-        return (th->worker->rootMoves[0].score - minScore + 14) * int(th->worker->completedDepth);
+    auto thread_voting_value = [minScore, tm, mainThreadLastTime](Thread* th) {
+        return (th->worker->rootMoves[0].score - minScore + 14) * int(th->worker->completedDepth) 
+                    * mainThreadLastTime / std::max(tm.elapsed_time(th->worker->lastCompleteDepth), TimePoint(1));
     };
 
-    for (auto&& th : threads)
+    for (auto&& th : threads) {
         votes[th->worker->rootMoves[0].pv[0]] += thread_voting_value(th.get());
+    }
 
     for (auto&& th : threads)
     {

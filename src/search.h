@@ -297,6 +297,8 @@ class Worker {
     TTMoveHistory    ttMoveHistory;
     SharedHistories& sharedHistory;
 
+    TimePoint lastCompleteDepth;
+
    private:
     void iterative_deepening();
 

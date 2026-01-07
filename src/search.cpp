@@ -437,8 +437,10 @@ void Search::Worker::iterative_deepening() {
                 break;
         }
 
-        if (!threads.stop)
+        if (!threads.stop) {
             completedDepth = rootDepth;
+            lastCompleteDepth = now();
+        }
 
         // We make sure not to pick an unproven mated-in score,
         // in case this thread prematurely stopped search (aborted-search).
