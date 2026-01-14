@@ -1177,16 +1177,8 @@ moves_loop:  // When in check, search starts here
 
                 undo_move(pos, move);
 
-                if (value >= newMoveScore && value >= beta)
+                if (value >= newMoveScore)
                     return value;
-
-                mp.setTTMove(newMove);
-
-                move = newMove;
-
-                capture    = pos.capture_stage(move);
-                givesCheck = pos.gives_check(move);
-                movedPiece = pos.moved_piece(move);
             }
 
             // Negative extensions
