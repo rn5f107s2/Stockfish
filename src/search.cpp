@@ -1133,6 +1133,7 @@ moves_loop:  // When in check, search starts here
             Value singularBeta  = ttData.value - (53 + 75 * (ss->ttPv && !PvNode)) * depth / 60;
             Depth singularDepth = newDepth / 2;
 
+            ss->currentMove  = Move::none();
             ss->excludedMove = move;
             value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
             ss->excludedMove = Move::none();
@@ -1157,10 +1158,35 @@ moves_loop:  // When in check, search starts here
             // over the original beta, we assume this expected cut-node is not
             // singular (multiple moves fail high), and we can prune the whole
             // subtree by returning a softbound.
-            else if (value >= beta && !is_decisive(value))
+            else if (value >= beta)
             {
-                ttMoveHistory << std::max(-400 - 100 * depth, -4000);
-                return value;
+                Move newMove       = ss->currentMove;
+                Value newMoveScore = value;
+
+                if (   !is_decisive(value)
+                    && (   ttData.value > alpha
+                        || !ss->currentMove))
+                {
+                    ttMoveHistory << std::max(-400 - 100 * depth, -4000);
+                    return value;
+                }
+
+                do_move(pos, move, st, ss);
+
+                value = -search<NonPV>(pos, ss + 1, -(value + 1), value, singularDepth, cutNode);
+
+                undo_move(pos, move);
+
+                if (value >= newMoveScore && value >= beta)
+                    return value;
+
+                mp.setTTMove(newMove);
+
+                move = newMove;
+
+                capture    = pos.capture_stage(move);
+                givesCheck = pos.gives_check(move);
+                movedPiece = pos.moved_piece(move);
             }
 
             // Negative extensions
