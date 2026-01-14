@@ -1133,7 +1133,6 @@ moves_loop:  // When in check, search starts here
             Value singularBeta  = ttData.value - (53 + 75 * (ss->ttPv && !PvNode)) * depth / 60;
             Depth singularDepth = newDepth / 2;
 
-            ss->currentMove  = Move::none();
             ss->excludedMove = move;
             value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
             ss->excludedMove = Move::none();
@@ -1160,16 +1159,12 @@ moves_loop:  // When in check, search starts here
             // subtree by returning a softbound.
             else if (value >= beta)
             {
-                Move newMove       = ss->currentMove;
                 Value newMoveScore = value;
 
-                if (   !is_decisive(value)
-                    && (   ttData.value > alpha
-                        || !ss->currentMove))
-                {
-                    ttMoveHistory << std::max(-400 - 100 * depth, -4000);
+                ttMoveHistory << std::max(-400 - 100 * depth, -4000);
+
+                if (!is_decisive(value) && ttData.value > alpha)
                     return value;
-                }
 
                 do_move(pos, move, st, ss);
 
