@@ -474,6 +474,25 @@ class TestSyzygy(metaclass=OrderedClassMembers):
         self.stockfish.check_output(check_output)
         self.stockfish.expect("bestmove *")
 
+class TestEnPassantSanititzation(metaclass=OrderedClassMembers):
+    def beforeAll(self):
+        self.stockfish = Stockfish()
+
+    def afterAll(self):
+        self.stockfish.quit()
+        assert self.stockfish.close() == 0
+
+    def afterEach(self):
+        assert postfix_check(self.stockfish.get_output()) == True
+        self.stockfish.clear_output()
+
+    def test_position_1(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k1r5/8/8/1pP5/8/2K5/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k1r5/8/8/1pP5/8/2K5/8/8 w - b6 0 1")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Stockfish with testing options")
