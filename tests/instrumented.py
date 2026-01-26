@@ -488,10 +488,80 @@ class TestEnPassantSanititzation(metaclass=OrderedClassMembers):
 
     def test_position_1(self):
         self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen rnbqkbnr/ppp1p1pp/5p2/3pP3/8/8/PPPP1PPP/RNBQKBNR w kq d6 0 3")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: rnbqkbnr/ppp1p1pp/5p2/3pP3/8/8/PPPP1PPP/RNBQKBNR w kq d6 0 3")
+
+    def test_position_2(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k7/8/8/1pP5/2K5/8/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k7/8/8/1pP5/2K5/8/8/8 w - b6 0 1")
+
+    def test_position_3(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k1r5/8/8/1pP5/2K5/8/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k1r5/8/8/1pP5/2K5/8/8/8 w - - 0 1")
+
+    def test_position_4(self):
+        self.stockfish.send_command("ucinewgame")
         self.stockfish.send_command("position fen k1r5/8/8/1pP5/8/2K5/8/8 w - b6 0 1")
         self.stockfish.send_command("d")
 
-        self.stockfish.expect("Fen: k1r5/8/8/1pP5/8/2K5/8/8 w - b6 0 1")
+        self.stockfish.expect("Fen: k1r5/8/8/1pP5/8/2K5/8/8 w - - 0 1")
+
+    def test_position_5(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k1r5/8/8/PpP5/8/2K5/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k1r5/8/8/PpP5/8/2K5/8/8 w - b6 0 1")
+
+    def test_position_6(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k1r5/8/8/PpP5/2K5/8/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k1r5/8/8/PpP5/2K5/8/8/8 w - b6 0 1")
+
+    def test_position_7(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k7/4b3/8/PpP5/1K6/8/8/8 w - b6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k7/4b3/8/PpP5/1K6/8/8/8 w - b6 0 1")
+
+    def test_position_8(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k7/b5b1/8/2PpP3/3K4/8/8/8 w - d6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k7/b5b1/8/2PpP3/3K4/8/8/8 w - - 0 1")
+
+    def test_position_9(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k7/8/8/r2pPK2/8/8/8/8 w - d6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k7/8/8/r2pPK2/8/8/8/8 w - - 0 1")
+
+    def test_position_10(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen k7/8/8/r1PpPK2/8/8/8/8 w - d6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: k7/8/8/r1PpPK2/8/8/8/8 w - d6 0 1")
+
+    def test_position_11(self):
+        self.stockfish.send_command("ucinewgame")
+        self.stockfish.send_command("position fen kb6/8/8/3pP3/5K2/8/8/8 w - d6 0 1")
+        self.stockfish.send_command("d")
+
+        self.stockfish.expect("Fen: kb6/8/8/3pP3/5K2/8/8/8 w - d6 0 1")
 
 
 def parse_args():
