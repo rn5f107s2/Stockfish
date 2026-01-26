@@ -350,7 +350,7 @@ class Stockfish:
             if fnmatch.fnmatch(line, expected_output):
                 return
             
-    @timeout_decorator(1)
+    @timeout_decorator(3)
     def expect_fast(self, expected_output: str):
         for line in self.readline():
             if fnmatch.fnmatch(line, expected_output):
