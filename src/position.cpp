@@ -264,31 +264,23 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si) {
 
     // 4. En passant square.
     // Ignore if square is invalid or not on side to move relative rank 6.
-    bool enpassant = false, legalEP = false;
+    bool enpassant = false;
 
     if (((ss >> col) && (col >= 'a' && col <= 'h'))
         && ((ss >> row) && (row == (sideToMove == WHITE ? '6' : '3'))))
     {
         st->epSquare = make_square(File(col - 'a'), Rank(row - '1'));
 
-        Bitboard pawns  = attacks_bb<PAWN>(st->epSquare, ~sideToMove) & pieces(sideToMove, PAWN);
-        Bitboard target = (pieces(~sideToMove, PAWN) & (st->epSquare + pawn_push(~sideToMove)));
-        Bitboard occ    = pieces() ^ target ^ st->epSquare;
-
         // En passant square will be considered only if
         // a) side to move have a pawn threatening epSquare
         // b) there is an enemy pawn in front of epSquare
         // c) there is no piece on epSquare or behind epSquare
-        enpassant =
-          pawns && target && !(pieces() & (st->epSquare | (st->epSquare + pawn_push(sideToMove))));
-
-        // If no pawn can execute the en passant capture without leaving the king in check, don't record the epSquare
-        while (pawns)
-            legalEP |= !(attackers_to(square<KING>(sideToMove), occ ^ pop_lsb(pawns))
-                         & pieces(~sideToMove) & ~target);
+        enpassant = attacks_bb<PAWN>(st->epSquare, ~sideToMove) & pieces(sideToMove, PAWN)
+                 && (pieces(~sideToMove, PAWN) & (st->epSquare + pawn_push(~sideToMove)))
+                 && !(pieces() & (st->epSquare | (st->epSquare + pawn_push(sideToMove))));
     }
 
-    if (!enpassant || !legalEP)
+    if (!enpassant)
         st->epSquare = SQ_NONE;
 
     // 5-6. Halfmove clock and fullmove number
@@ -1481,7 +1473,7 @@ bool Position::material_key_is_ok() const { return compute_material_key() == st-
 // This is meant to be helpful when debugging.
 bool Position::pos_is_ok() const {
 
-    constexpr bool Fast = true;  // Quick (default) or full check?
+    constexpr bool Fast = false;  // Quick (default) or full check?
 
     if ((sideToMove != WHITE && sideToMove != BLACK) || piece_on(square<KING>(WHITE)) != W_KING
         || piece_on(square<KING>(BLACK)) != B_KING
@@ -1497,6 +1489,22 @@ bool Position::pos_is_ok() const {
 
     if ((pieces(PAWN) & (Rank1BB | Rank8BB)) || pieceCount[W_PAWN] > 8 || pieceCount[B_PAWN] > 8)
         assert(0 && "pos_is_ok: Pawns");
+
+
+
+    if (ep_square() != SQ_NONE) {
+        Square ksq = square<KING>(sideToMove);
+
+        Bitboard captured = (ep_square() + pawn_push(~sideToMove)) & pieces(~sideToMove, PAWN);
+        Bitboard pawns    = attacks_bb<PAWN>(ep_square(), ~sideToMove) & pieces(sideToMove, PAWN);
+        Bitboard potentialCheckers = pieces(~sideToMove) ^ captured;
+
+        if (   !captured 
+            || !pawns
+            || (   (attackers_to(ksq, pieces() ^ captured ^ ep_square() ^ lsb(pawns)) & potentialCheckers)
+                && (attackers_to(ksq, pieces() ^ captured ^ ep_square() ^ msb(pawns)) & potentialCheckers)))
+            assert(0 && "pos_is_ok: En passant square");
+    }
 
     if ((pieces(WHITE) & pieces(BLACK)) || (pieces(WHITE) | pieces(BLACK)) != pieces()
         || popcount(pieces(WHITE)) > 16 || popcount(pieces(BLACK)) > 16)
