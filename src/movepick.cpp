@@ -88,16 +88,20 @@ MovePicker::MovePicker(const Position&              p,
                        const CapturePieceToHistory* cph,
                        const PieceToHistory**       ch,
                        const SharedHistories*       sh,
-                       int                          pl) :
+                       int                          pl,
+                       uint64_t                     n,
+                       bool                         un) :
     pos(p),
     mainHistory(mh),
     lowPlyHistory(lph),
     captureHistory(cph),
     continuationHistory(ch),
     sharedHistory(sh),
+    prng(n),
     ttMove(ttm),
     depth(d),
-    ply(pl) {
+    ply(pl),
+    useNoise(un) {
 
     if (pos.checkers())
         stage = EVASION_TT + !(ttm && pos.pseudo_legal(ttm));
@@ -112,7 +116,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
     pos(p),
     captureHistory(cph),
     ttMove(ttm),
-    threshold(th) {
+    threshold(th),
+    prng(0) {
     assert(!pos.checkers());
 
     stage = PROBCUT_TT + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm));
@@ -127,6 +132,8 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
     Color us = pos.side_to_move();
+
+    int noiseMask = (1 << std::min(14, 2 * depth)) - 1;
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     if constexpr (Type == QUIETS)
@@ -186,6 +193,9 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             else
                 m.value = (*mainHistory)[us][m.raw()] + (*continuationHistory[0])[pc][to];
         }
+
+        if (useNoise && ttMove)
+            m.value += (prng.rand<int>() & noiseMask);
     }
     return it;
 }
