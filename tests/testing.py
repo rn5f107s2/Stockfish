@@ -388,7 +388,7 @@ class Stockfish:
                 if fnmatch.fnmatch(line, expected):
                     break
                 else:
-                    raise UnexpectedOutputException(line, expected)
+                    break
 
     def readline(self):
         if not self.process:
