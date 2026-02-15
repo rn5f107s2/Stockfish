@@ -1497,11 +1497,12 @@ bool Position::pos_is_ok() const {
 
         Bitboard captured = (ep_square() + pawn_push(~sideToMove)) & pieces(~sideToMove, PAWN);
         Bitboard pawns    = attacks_bb<PAWN>(ep_square(), ~sideToMove) & pieces(sideToMove, PAWN);
+        Bitboard potentialCheckers = pieces(~sideToMove) ^ captured;
 
         if (   !captured 
             || !pawns
-            || (   attackers_to_exist(ksq, pieces() ^ captured ^ ep_square() ^ lsb(pawns), ~sideToMove)
-                && attackers_to_exist(ksq, pieces() ^ captured ^ ep_square() ^ msb(pawns), ~sideToMove)))
+            || (   (attackers_to(ksq, pieces() ^ captured ^ ep_square() ^ lsb(pawns)) & potentialCheckers)
+                && (attackers_to(ksq, pieces() ^ captured ^ ep_square() ^ msb(pawns)) & potentialCheckers)))
             assert(0 && "pos_is_ok: En passant square");
     }
 
