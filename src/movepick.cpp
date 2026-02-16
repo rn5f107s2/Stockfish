@@ -116,8 +116,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
     pos(p),
     captureHistory(cph),
     ttMove(ttm),
-    threshold(th),
-    prng(0) {
+    prng(0),
+    threshold(th) {
     assert(!pos.checkers());
 
     stage = PROBCUT_TT + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm));
@@ -133,7 +133,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
-    int noiseMask = (1 << std::min(14, 2 * depth)) - 1;
+    int noiseMask = (1 << std::min(15, 3 * depth)) - 1;
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     if constexpr (Type == QUIETS)
@@ -194,8 +194,11 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
                 m.value = (*mainHistory)[us][m.raw()] + (*continuationHistory[0])[pc][to];
         }
 
-        if (useNoise && ttMove)
-            m.value += (prng.rand<int>() & noiseMask);
+        if (useNoise && ttMove) {
+            int noise = prng.rand<int>() & noiseMask;
+
+            m.value += Type == QUIETS ? noise : noise / 8;
+        }
     }
     return it;
 }
