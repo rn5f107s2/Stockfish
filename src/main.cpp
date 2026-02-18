@@ -32,6 +32,9 @@ int main(int argc, char* argv[]) {
 
   std::cout << engine_info() << std::endl;
 
+  for (int i = 0; i < 64; i++)
+    Threads[i].idx = i;
+
   UCI::init(Options);
   PSQT::init();
   Bitboards::init();
@@ -40,12 +43,12 @@ int main(int argc, char* argv[]) {
   Search::init();
   Eval::init();
   Pawns::init();
-  Threads.init();
+  Threads[0].init();
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
 
   UCI::loop(argc, argv);
 
-  Threads.exit();
+  for (int i = 0; i < (threadCount + 1) / 2; i++) Threads[i].exit();
   return 0;
 }

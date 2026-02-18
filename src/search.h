@@ -101,12 +101,12 @@ typedef std::unique_ptr<std::stack<StateInfo>> StateStackPtr;
 
 extern volatile SignalsType Signals;
 extern LimitsType Limits;
-extern RootMoveVector RootMoves;
-extern Position RootPos;
-extern StateStackPtr SetupStates;
+extern RootMoveVector RootMoves[64];
+extern Position RootPos[64];
+extern StateStackPtr SetupStates[64];
 
 void init();
-void think();
+void think(int tidx);
 void reset();
 template<bool Root> uint64_t perft(Position& pos, Depth depth);
 

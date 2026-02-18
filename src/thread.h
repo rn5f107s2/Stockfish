@@ -26,6 +26,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <iostream>
 
 #include "material.h"
 #include "movepick.h"
@@ -166,8 +167,11 @@ struct ThreadPool : public std::vector<Thread*> {
 
   Depth minimumSplitDepth;
   TimerThread* timer;
+
+  int idx;
 };
 
-extern ThreadPool Threads;
+extern ThreadPool Threads[64];
+extern int threadCount;
 
 #endif // #ifndef THREAD_H_INCLUDED

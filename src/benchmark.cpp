@@ -146,7 +146,7 @@ void benchmark(const Position& current, istream& is) {
 
   for (size_t i = 0; i < fens.size(); ++i)
   {
-      Position pos(fens[i], Options["UCI_Chess960"], Threads.main());
+      Position pos(fens[i], Options["UCI_Chess960"], Threads[0].main());
 
       cerr << "\nPosition: " << i + 1 << '/' << fens.size() << endl;
 
@@ -156,9 +156,9 @@ void benchmark(const Position& current, istream& is) {
       else
       {
           Search::StateStackPtr st;
-          Threads.start_thinking(pos, limits, st);
-          Threads.main()->join();
-          nodes += Search::RootPos.nodes_searched();
+          Threads[0].start_thinking(pos, limits, st);
+          Threads[0].main()->join();
+          nodes += Search::RootPos[0].nodes_searched();
       }
   }
 

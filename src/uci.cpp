@@ -49,7 +49,7 @@ namespace {
   // or the starting position ("startpos") and then makes the moves given in the
   // following move list ("moves").
 
-  void position(Position& pos, istringstream& is) {
+  void position(Position pos[64], istringstream& is) {
 
     Move m;
     string token, fen;
@@ -67,15 +67,17 @@ namespace {
     else
         return;
 
-    pos.set(fen, Options["UCI_Chess960"], Threads.main());
+    for (int i = 0; i < (threadCount + 1) / 2; i++)
+        pos[i].set(fen, Options["UCI_Chess960"], Threads[i].main());
     SetupStates = Search::StateStackPtr(new std::stack<StateInfo>);
 
     // Parse move list (if any)
-    while (is >> token && (m = UCI::to_move(pos, token)) != MOVE_NONE)
-    {
-        SetupStates->push(StateInfo());
-        pos.do_move(m, SetupStates->top(), pos.gives_check(m, CheckInfo(pos)));
-    }
+    for (int i = 0; i < (threadCount + 1) / 2; i++)
+        while (is >> token && (m = UCI::to_move(pos[i], token)) != MOVE_NONE)
+        {
+            SetupStates->push(StateInfo());
+            pos[i].do_move(m, SetupStates->top(), pos[i].gives_check(m, CheckInfo(pos[i])));
+        }
   }
 
 
@@ -96,8 +98,9 @@ namespace {
     while (is >> token)
         value += string(" ", value.empty() ? 0 : 1) + token;
 
-    if (Options.count(name))
+    if (Options.count(name)) {
         Options[name] = value;
+    }
     else
         sync_cout << "No such option: " << name << sync_endl;
   }
@@ -107,7 +110,7 @@ namespace {
   // the thinking time and other parameters from the input string, then starts
   // the search.
 
-  void go(const Position& pos, istringstream& is) {
+  void go(const Position pos[64], istringstream& is) {
 
     Search::LimitsType limits;
     string token;
@@ -115,7 +118,7 @@ namespace {
     while (is >> token)
         if (token == "searchmoves")
             while (is >> token)
-                limits.searchmoves.push_back(UCI::to_move(pos, token));
+                limits.searchmoves.push_back(UCI::to_move(pos[0], token));
 
         else if (token == "wtime")     is >> limits.time[WHITE];
         else if (token == "btime")     is >> limits.time[BLACK];
@@ -129,7 +132,9 @@ namespace {
         else if (token == "infinite")  limits.infinite = 1;
         else if (token == "ponder")    limits.ponder = 1;
 
-    Threads.start_thinking(pos, limits, SetupStates);
+    for (int i = 0; i < (threadCount + 1) / 2; i++) {
+        Threads[i].start_thinking(pos[i], limits, SetupStates);
+    }
   }
 
 } // namespace
@@ -143,7 +148,23 @@ namespace {
 
 void UCI::loop(int argc, char* argv[]) {
 
-  Position pos(StartFEN, false, Threads.main()); // The root position
+  Position pos[64]; // The root position
+
+  for (int i = 0; i < 1; i++)
+    pos[i] = Position(StartFEN, false, Threads[i].main());
+
+  istringstream i("name Threads value 2");
+
+  setoption(i);
+
+  Threads[1].init();
+
+  pos[1] = Position(StartFEN, false, Threads[1].main());
+
+  istringstream i2("name Threads value 4");
+
+  setoption(i2);
+
   string token, cmd;
 
   for (int i = 1; i < argc; ++i)
@@ -168,7 +189,8 @@ void UCI::loop(int argc, char* argv[]) {
           || (token == "ponderhit" && Search::Signals.stopOnPonderhit))
       {
           Search::Signals.stop = true;
-          Threads.main()->notify_one(); // Could be sleeping
+          for (int i = 0; i < (threadCount + 1) / 2; i++)
+            Threads[i].main()->notify_one(); // Could be sleeping
       }
       else if (token == "ponderhit")
           Search::Limits.ponder = 0; // Switch to normal search
@@ -189,10 +211,10 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "setoption")  setoption(is);
 
       // Additional custom non-UCI commands, useful for debugging
-      else if (token == "flip")       pos.flip();
-      else if (token == "bench")      benchmark(pos, is);
+      else if (token == "flip")       pos[0].flip();
+      else if (token == "bench")      benchmark(pos[0], is);
       else if (token == "d")          sync_cout << pos << sync_endl;
-      else if (token == "eval")       sync_cout << Eval::trace(pos) << sync_endl;
+      else if (token == "eval")       sync_cout << Eval::trace(pos[0]) << sync_endl;
       else if (token == "perft")
       {
           int depth;
@@ -202,14 +224,15 @@ void UCI::loop(int argc, char* argv[]) {
           ss << Options["Hash"]    << " "
              << Options["Threads"] << " " << depth << " current perft";
 
-          benchmark(pos, ss);
+          benchmark(pos[0], ss);
       }
       else
           sync_cout << "Unknown command: " << cmd << sync_endl;
 
   } while (token != "quit" && argc == 1); // Passed args have one-shot behaviour
 
-  Threads.main()->join(); // Cannot quit whilst the search is running
+    for (int i = 0; i < (threadCount + 1) / 2; i++)
+        Threads[i].main()->join(); // Cannot quit whilst the search is running
 }
 
 

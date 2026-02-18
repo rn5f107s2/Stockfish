@@ -19,6 +19,7 @@
 
 #include <algorithm> // For std::count
 #include <cassert>
+#include <iostream>
 
 #include "movegen.h"
 #include "search.h"
@@ -27,9 +28,10 @@
 
 using namespace Search;
 
-ThreadPool Threads; // Global object
+ThreadPool Threads[64]; // Global object
+int threadCount = 0;
 
-extern void check_time();
+extern void check_time(int threadCount);
 
 namespace {
 
@@ -85,7 +87,7 @@ Thread::Thread() /* : splitPoints() */ { // Initialization of non POD broken in 
   splitPointsSize = 0;
   activeSplitPoint = nullptr;
   activePosition = nullptr;
-  idx = Threads.size(); // Starts from 0
+  idx = threadCount++; // Starts from 0
 }
 
 
@@ -138,7 +140,7 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
 
   assert(searching);
   assert(-VALUE_INFINITE < *bestValue && *bestValue <= alpha && alpha < beta && beta <= VALUE_INFINITE);
-  assert(depth >= Threads.minimumSplitDepth);
+  assert(depth >= Threads[idx / 2].minimumSplitDepth);
   assert(splitPointsSize < MAX_SPLITPOINTS_PER_THREAD);
 
   // Pick and init the next available split point
@@ -172,7 +174,7 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
   Thread* slave;
 
   while (    sp.slavesMask.count() < MAX_SLAVES_PER_SPLITPOINT
-         && (slave = Threads.available_slave(&sp)) != nullptr)
+         && (slave = Threads[idx / 2].available_slave(&sp)) != nullptr)
   {
      slave->spinlock.acquire();
 
@@ -234,7 +236,7 @@ void TimerThread::idle_loop() {
       lk.unlock();
 
       if (run)
-          check_time();
+          check_time(threadCount);
   }
 }
 
@@ -262,7 +264,7 @@ void MainThread::idle_loop() {
       {
           searching = true;
 
-          Search::think();
+          Search::think(idx / 2);
 
           assert(searching);
 
@@ -322,13 +324,14 @@ void ThreadPool::read_uci_options() {
 
   assert(requested > 0);
 
-  while (size() < requested)
+  if (size() + 2 * idx < requested && size() < 2) {
       push_back(new_thread<Thread>());
+  }
 
-  while (size() > requested)
+  if ((size() + 2 * idx < requested) && size())
   {
-      delete_thread(back());
-      pop_back();
+      //delete_thread(back());
+      //pop_back();
   }
 }
 
@@ -356,19 +359,19 @@ void ThreadPool::start_thinking(const Position& pos, const LimitsType& limits,
   Signals.stopOnPonderhit = Signals.firstRootMove = false;
   Signals.stop = Signals.failedLowAtRoot = false;
 
-  RootMoves.clear();
-  RootPos = pos;
+  RootMoves[idx].clear();
+  RootPos[idx] = pos;
   Limits = limits;
   if (states.get()) // If we don't set a new position, preserve current state
   {
-      SetupStates = std::move(states); // Ownership transfer here
+      SetupStates[idx] = std::move(states); // Ownership transfer here
       assert(!states.get());
   }
 
   for (const auto& m : MoveList<LEGAL>(pos))
       if (   limits.searchmoves.empty()
           || std::count(limits.searchmoves.begin(), limits.searchmoves.end(), m))
-          RootMoves.push_back(RootMove(m));
+          RootMoves[idx].push_back(RootMove(m));
 
   main()->thinking = true;
   main()->notify_one(); // Wake up main thread: 'thinking' must be already set

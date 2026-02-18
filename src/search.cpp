@@ -39,9 +39,9 @@ namespace Search {
 
   volatile SignalsType Signals;
   LimitsType Limits;
-  RootMoveVector RootMoves;
-  Position RootPos;
-  StateStackPtr SetupStates;
+  RootMoveVector RootMoves[64];
+  Position RootPos[64];
+  StateStackPtr SetupStates[64];
 }
 
 namespace Tablebases {
@@ -225,10 +225,10 @@ template uint64_t Search::perft<true>(Position& pos, Depth depth);
 /// called by the main thread when the program receives the UCI 'go' command. It
 /// searches from RootPos and at the end prints the "bestmove" to output.
 
-void Search::think() {
+void Search::think(int tidx) {
 
-  Color us = RootPos.side_to_move();
-  Time.init(Limits, us, RootPos.game_ply(), now());
+  Color us = RootPos[tidx].side_to_move();
+  Time.init(Limits, us, RootPos[tidx].game_ply(), now());
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
@@ -247,21 +247,21 @@ void Search::think() {
       TB::ProbeDepth = DEPTH_ZERO;
   }
 
-  if (RootMoves.empty())
+  if (RootMoves[tidx].empty())
   {
-      RootMoves.push_back(RootMove(MOVE_NONE));
+      RootMoves[tidx].push_back(RootMove(MOVE_NONE));
       sync_cout << "info depth 0 score "
-                << UCI::value(RootPos.checkers() ? -VALUE_MATE : VALUE_DRAW)
+                << UCI::value(RootPos[tidx].checkers() ? -VALUE_MATE : VALUE_DRAW)
                 << sync_endl;
   }
   else
   {
-      if (TB::Cardinality >=  RootPos.count<ALL_PIECES>(WHITE)
-                            + RootPos.count<ALL_PIECES>(BLACK))
+      if (TB::Cardinality >=  RootPos[tidx].count<ALL_PIECES>(WHITE)
+                            + RootPos[tidx].count<ALL_PIECES>(BLACK))
       {
           // If the current root position is in the tablebases then RootMoves
           // contains only moves that preserve the draw or win.
-          TB::RootInTB = Tablebases::root_probe(RootPos, RootMoves, TB::Score);
+          TB::RootInTB = Tablebases::root_probe(RootPos[tidx], RootMoves[tidx], TB::Score);
 
           if (TB::RootInTB)
               TB::Cardinality = 0; // Do not probe tablebases during the search
@@ -269,7 +269,7 @@ void Search::think() {
           else // If DTZ tables are missing, use WDL tables as a fallback
           {
               // Filter out moves that do not preserve a draw or win
-              TB::RootInTB = Tablebases::root_probe_wdl(RootPos, RootMoves, TB::Score);
+              TB::RootInTB = Tablebases::root_probe_wdl(RootPos[tidx], RootMoves[tidx], TB::Score);
 
               // Only probe during search if winning
               if (TB::Score <= VALUE_DRAW)
@@ -278,7 +278,7 @@ void Search::think() {
 
           if (TB::RootInTB)
           {
-              TB::Hits = RootMoves.size();
+              TB::Hits = RootMoves[tidx].size();
 
               if (!TB::UseRule50)
                   TB::Score =  TB::Score > VALUE_DRAW ?  VALUE_MATE - MAX_PLY - 1
@@ -287,24 +287,26 @@ void Search::think() {
           }
       }
 
-      for (Thread* th : Threads)
+      int tpIdx = RootPos[tidx].this_thread()->idx / 2;
+
+      for (Thread* th : Threads[tpIdx])
       {
           th->maxPly = 0;
           th->notify_one(); // Wake up all the threads
       }
 
-      Threads.timer->run = true;
-      Threads.timer->notify_one(); // Start the recurring timer
+      Threads[tpIdx].timer->run = true;
+      Threads[tpIdx].timer->notify_one(); // Start the recurring timer
 
-      id_loop(RootPos); // Let's start searching !
+      id_loop(RootPos[tidx]); // Let's start searching !
 
-      Threads.timer->run = false;
+      Threads[tpIdx].timer->run = false;
   }
 
   // When playing in 'nodes as time' mode, subtract the searched nodes from
   // the available ones before to exit.
   if (Limits.npmsec)
-      Time.availableNodes += Limits.inc[us] - RootPos.nodes_searched();
+      Time.availableNodes += Limits.inc[us] - RootPos[tidx].nodes_searched();
 
   // When we reach the maximum depth, we can arrive here without a raise of
   // Signals.stop. However, if we are pondering or in an infinite search,
@@ -314,13 +316,15 @@ void Search::think() {
   if (!Signals.stop && (Limits.ponder || Limits.infinite))
   {
       Signals.stopOnPonderhit = true;
-      RootPos.this_thread()->wait_for(Signals.stop);
+      RootPos[tidx].this_thread()->wait_for(Signals.stop);
   }
 
-  sync_cout << "bestmove " << UCI::move(RootMoves[0].pv[0], RootPos.is_chess960());
+  if (tidx == 0)
+    sync_cout << "bestmove " << UCI::move(RootMoves[tidx][0].pv[0], RootPos[tidx].is_chess960());
 
-  if (RootMoves[0].pv.size() > 1 || RootMoves[0].extract_ponder_from_tt(RootPos))
-      std::cout << " ponder " << UCI::move(RootMoves[0].pv[1], RootPos.is_chess960());
+  if (tidx == 0)
+    if (RootMoves[tidx][0].pv.size() > 1 || RootMoves[tidx][0].extract_ponder_from_tt(RootPos[tidx]))
+          std::cout << " ponder " << UCI::move(RootMoves[tidx][0].pv[1], RootPos[tidx].is_chess960());
 
   std::cout << sync_endl;
 }
@@ -333,6 +337,8 @@ namespace {
   // user stops the search, or the maximum search depth is reached.
 
   void id_loop(Position& pos) {
+
+    int tidx = pos.this_thread()->idx / 2;
 
     Stack stack[MAX_PLY+4], *ss = stack+2; // To allow referencing (ss-2) and (ss+2)
     Depth depth;
@@ -358,7 +364,7 @@ namespace {
     if (skill.enabled())
         multiPV = std::max(multiPV, (size_t)4);
 
-    multiPV = std::min(multiPV, RootMoves.size());
+    multiPV = std::min(multiPV, RootMoves[tidx].size());
 
     // Iterative deepening loop until requested to stop or target depth reached
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
@@ -368,7 +374,7 @@ namespace {
 
         // Save the last iteration's scores before first PV line is searched and
         // all the move scores except the (new) PV are set to -VALUE_INFINITE.
-        for (RootMove& rm : RootMoves)
+        for (RootMove& rm : RootMoves[tidx])
             rm.previousScore = rm.score;
 
         // MultiPV loop. We perform a full root search for each PV line
@@ -378,8 +384,8 @@ namespace {
             if (depth >= 5 * ONE_PLY)
             {
                 delta = Value(16);
-                alpha = std::max(RootMoves[PVIdx].previousScore - delta,-VALUE_INFINITE);
-                beta  = std::min(RootMoves[PVIdx].previousScore + delta, VALUE_INFINITE);
+                alpha = std::max(RootMoves[tidx][PVIdx].previousScore - delta,-VALUE_INFINITE);
+                beta  = std::min(RootMoves[tidx][PVIdx].previousScore + delta, VALUE_INFINITE);
             }
 
             // Start with a small aspiration window and, in the case of a fail
@@ -395,12 +401,12 @@ namespace {
                 // and we want to keep the same order for all the moves except the
                 // new PV that goes to the front. Note that in case of MultiPV
                 // search the already searched PV lines are preserved.
-                std::stable_sort(RootMoves.begin() + PVIdx, RootMoves.end());
+                std::stable_sort(RootMoves[tidx].begin() + PVIdx, RootMoves[tidx].end());
 
                 // Write PV back to transposition table in case the relevant
                 // entries have been overwritten during the search.
                 for (size_t i = 0; i <= PVIdx; ++i)
-                    RootMoves[i].insert_pv_in_tt(pos);
+                    RootMoves[tidx][i].insert_pv_in_tt(pos);
 
                 // If search has been stopped break immediately. Sorting and
                 // writing PV back to TT is safe because RootMoves is still
@@ -411,6 +417,7 @@ namespace {
                 // When failing high/low give some update (without cluttering
                 // the UI) before a re-search.
                 if (   multiPV == 1
+                    && tidx == 0
                     && (bestValue <= alpha || bestValue >= beta)
                     && Time.elapsed() > 3000)
                     sync_cout << UCI::pv(pos, depth, alpha, beta) << sync_endl;
@@ -439,13 +446,13 @@ namespace {
             }
 
             // Sort the PV lines searched so far and update the GUI
-            std::stable_sort(RootMoves.begin(), RootMoves.begin() + PVIdx + 1);
+            std::stable_sort(RootMoves[tidx].begin(), RootMoves[tidx].begin() + PVIdx + 1);
 
-            if (Signals.stop)
-                sync_cout << "info nodes " << RootPos.nodes_searched()
+            if (Signals.stop && tidx == 0)
+                sync_cout << "info nodes " << RootPos[tidx].nodes_searched()
                           << " time " << Time.elapsed() << sync_endl;
 
-            else if (PVIdx + 1 == multiPV || Time.elapsed() > 3000)
+            else if (tidx == 0 && (PVIdx + 1 == multiPV || Time.elapsed() > 3000))
                 sync_cout << UCI::pv(pos, depth, alpha, beta) << sync_endl;
         }
 
@@ -471,9 +478,9 @@ namespace {
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
                 // from the previous search and just did a fast verification.
-                if (   RootMoves.size() == 1
+                if (   RootMoves[tidx].size() == 1
                     || Time.elapsed() > Time.available()
-                    || (   RootMoves[0].pv[0] == easyMove
+                    || (   RootMoves[tidx][0].pv[0] == easyMove
                         && BestMoveChanges < 0.03
                         && Time.elapsed() > Time.available() / 10))
                 {
@@ -486,8 +493,8 @@ namespace {
                 }
             }
 
-            if (RootMoves[0].pv.size() >= 3)
-                EasyMove.update(pos, RootMoves[0].pv);
+            if (RootMoves[tidx][0].pv.size() >= 3)
+                EasyMove.update(pos, RootMoves[tidx][0].pv);
             else
                 EasyMove.clear();
         }
@@ -500,8 +507,8 @@ namespace {
 
     // If skill level is enabled, swap best PV line with the sub-optimal one
     if (skill.enabled())
-        std::swap(RootMoves[0], *std::find(RootMoves.begin(),
-                  RootMoves.end(), skill.best_move(multiPV)));
+        std::swap(RootMoves[tidx][0], *std::find(RootMoves[tidx].begin(),
+                  RootMoves[tidx].end(), skill.best_move(multiPV)));
   }
 
 
@@ -537,6 +544,8 @@ namespace {
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
     inCheck = pos.checkers();
+
+    int tpIdx = thisThread->idx / 2;
 
     if (SpNode)
     {
@@ -591,7 +600,7 @@ namespace {
     excludedMove = ss->excludedMove;
     posKey = excludedMove ? pos.exclusion_key() : pos.key();
     tte = TT.probe(posKey, ttHit);
-    ss->ttMove = ttMove = RootNode ? RootMoves[PVIdx].pv[0] : ttHit ? tte->move() : MOVE_NONE;
+    ss->ttMove = ttMove = RootNode ? RootMoves[tpIdx][PVIdx].pv[0] : ttHit ? tte->move() : MOVE_NONE;
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
 
     // At non-PV nodes we check for a fail high/low. We don't prune at PV nodes
@@ -812,7 +821,7 @@ moves_loop: // When in check and at SpNode search starts from here
       // At root obey the "searchmoves" option and skip moves not listed in Root
       // Move List. As a consequence any illegal move is also skipped. In MultiPV
       // mode we also skip PV moves which have been already searched.
-      if (RootNode && !std::count(RootMoves.begin() + PVIdx, RootMoves.end(), move))
+      if (RootNode && !std::count(RootMoves[tpIdx].begin() + PVIdx, RootMoves[tpIdx].end(), move))
           continue;
 
       if (SpNode)
@@ -831,7 +840,7 @@ moves_loop: // When in check and at SpNode search starts from here
       {
           Signals.firstRootMove = (moveCount == 1);
 
-          if (thisThread == Threads.main() && Time.elapsed() > 3000)
+          if (thisThread == Threads[tpIdx].main() && Time.elapsed() > 3000)
               sync_cout << "info depth " << depth / ONE_PLY
                         << " currmove " << UCI::move(move, pos.is_chess960())
                         << " currmovenumber " << moveCount + PVIdx << sync_endl;
@@ -1026,7 +1035,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
       if (RootNode)
       {
-          RootMove& rm = *std::find(RootMoves.begin(), RootMoves.end(), move);
+          RootMove& rm = *std::find(RootMoves[tpIdx].begin(), RootMoves[tpIdx].end(), move);
 
           // PV move or new best move ?
           if (moveCount == 1 || value > alpha)
@@ -1088,11 +1097,11 @@ moves_loop: // When in check and at SpNode search starts from here
 
       // Step 19. Check for splitting the search
       if (   !SpNode
-          &&  Threads.size() >= 2
-          &&  depth >= Threads.minimumSplitDepth
+          &&  Threads[tpIdx].size() >= 2
+          &&  depth >= Threads[tpIdx].minimumSplitDepth
           &&  (   !thisThread->activeSplitPoint
                || !thisThread->activeSplitPoint->allSlavesSearching
-               || (   Threads.size() > MAX_SLAVES_PER_SPLITPOINT
+               || (   Threads[tpIdx].size() > MAX_SLAVES_PER_SPLITPOINT
                    && thisThread->activeSplitPoint->slavesMask.count() == MAX_SLAVES_PER_SPLITPOINT))
           &&  thisThread->splitPointsSize < MAX_SPLITPOINTS_PER_THREAD)
       {
@@ -1454,7 +1463,7 @@ moves_loop: // When in check and at SpNode search starts from here
     static PRNG rng(now());
 
     // RootMoves are already sorted by score in descending order
-    int variance = std::min(RootMoves[0].score - RootMoves[multiPV - 1].score, PawnValueMg);
+    int variance = std::min(RootMoves[0][0].score - RootMoves[0][multiPV - 1].score, PawnValueMg);
     int weakness = 120 - 2 * level;
     int maxScore = -VALUE_INFINITE;
 
@@ -1464,13 +1473,13 @@ moves_loop: // When in check and at SpNode search starts from here
     for (size_t i = 0; i < multiPV; ++i)
     {
         // This is our magic formula
-        int push = (  weakness * int(RootMoves[0].score - RootMoves[i].score)
+        int push = (  weakness * int(RootMoves[0][0].score - RootMoves[0][i].score)
                     + variance * (rng.rand<unsigned>() % weakness)) / 128;
 
-        if (RootMoves[i].score + push > maxScore)
+        if (RootMoves[0][i].score + push > maxScore)
         {
-            maxScore = RootMoves[i].score + push;
-            best = RootMoves[i].pv[0];
+            maxScore = RootMoves[0][i].score + push;
+            best = RootMoves[0][i].pv[0];
         }
     }
     return best;
@@ -1484,12 +1493,21 @@ moves_loop: // When in check and at SpNode search starts from here
 
 string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
 
+  int tidx = pos.this_thread()->idx / 2;
+
   std::stringstream ss;
   int elapsed = Time.elapsed() + 1;
-  size_t multiPV = std::min((size_t)Options["MultiPV"], RootMoves.size());
+  size_t multiPV = std::min((size_t)Options["MultiPV"], RootMoves[tidx].size());
   int selDepth = 0;
 
-  for (Thread* th : Threads)
+  int tpIdx = pos.this_thread()->idx / 2;
+
+  uint64_t nodes = 0;
+
+  for (int i = 0; i < (threadCount + 1) / 2; i++)
+    nodes += RootPos[i].nodes_searched();
+
+  for (Thread* th : Threads[tpIdx])
       if (th->maxPly > selDepth)
           selDepth = th->maxPly;
 
@@ -1501,7 +1519,7 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
           continue;
 
       Depth d = updated ? depth : depth - ONE_PLY;
-      Value v = updated ? RootMoves[i].score : RootMoves[i].previousScore;
+      Value v = updated ? RootMoves[tidx][i].score : RootMoves[tidx][i].previousScore;
 
       bool tb = TB::RootInTB && abs(v) < VALUE_MATE - MAX_PLY;
       v = tb ? TB::Score : v;
@@ -1518,8 +1536,8 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
       if (!tb && i == PVIdx)
           ss << (v >= beta ? " lowerbound" : v <= alpha ? " upperbound" : "");
 
-      ss << " nodes "    << pos.nodes_searched()
-         << " nps "      << pos.nodes_searched() * 1000 / elapsed;
+      ss << " nodes "    << nodes
+         << " nps "      << nodes * 1000 / elapsed;
 
       if (elapsed > 1000) // Earlier makes little sense
           ss << " hashfull " << TT.hashfull();
@@ -1528,7 +1546,7 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
          << " time "     << elapsed
          << " pv";
 
-      for (Move m : RootMoves[i].pv)
+      for (Move m : RootMoves[tidx][i].pv)
           ss << " " << UCI::move(m, pos.is_chess960());
   }
 
@@ -1658,7 +1676,7 @@ void Thread::idle_loop() {
           SplitPoint* bestSp = NULL;
           int minLevel = INT_MAX;
 
-          for (Thread* th : Threads)
+          for (Thread* th : Threads[idx / 2])
           {
               const size_t size = th->splitPointsSize; // Local copy
               sp = size ? &th->splitPoints[size - 1] : nullptr;
@@ -1670,7 +1688,7 @@ void Thread::idle_loop() {
               {
                   assert(this != th);
                   assert(!(this_sp && this_sp->slavesMask.none()));
-                  assert(Threads.size() > 2);
+                  assert(Threads[idx / 2].size() > 2);
 
                   // Prefer to join to SP with few parents to reduce the probability
                   // that a cut-off occurs above us, and hence we waste our work.
@@ -1713,12 +1731,12 @@ void Thread::idle_loop() {
       }
 
       // If search is finished then sleep, otherwise just yield
-      if (!Threads.main()->thinking)
+      if (!Threads[idx / 2].main()->thinking)
       {
           assert(!this_sp);
 
           std::unique_lock<Mutex> lk(mutex);
-          while (!exit && !Threads.main()->thinking)
+          while (!exit && !Threads[idx / 2].main()->thinking)
               sleepCondition.wait(lk);
       }
       else
@@ -1731,7 +1749,7 @@ void Thread::idle_loop() {
 /// used to print debug info and, more importantly, to detect when we are out of
 /// available time and thus stop the search.
 
-void check_time() {
+void check_time(int threadCount) {
 
   static TimePoint lastInfoTime = now();
   int elapsed = Time.elapsed();
@@ -1761,26 +1779,27 @@ void check_time() {
 
   else if (Limits.nodes)
   {
-      int64_t nodes = RootPos.nodes_searched();
+      int64_t nodes = RootPos[0].nodes_searched();
 
       // Loop across all split points and sum accumulated SplitPoint nodes plus
       // all the currently active positions nodes.
       // FIXME: Racy...
-      for (Thread* th : Threads)
-          for (size_t i = 0; i < th->splitPointsSize; ++i)
-          {
-              SplitPoint& sp = th->splitPoints[i];
+      for (int j = 0; j < (threadCount + 1) / 2; j++)
+        for (Thread* th : Threads[j])
+            for (size_t i = 0; i < th->splitPointsSize; ++i)
+            {
+                SplitPoint& sp = th->splitPoints[i];
 
-              sp.spinlock.acquire();
+                sp.spinlock.acquire();
 
-              nodes += sp.nodes;
+                nodes += sp.nodes;
 
-              for (size_t idx = 0; idx < Threads.size(); ++idx)
-                  if (sp.slavesMask.test(idx) && Threads[idx]->activePosition)
-                      nodes += Threads[idx]->activePosition->nodes_searched();
+                for (size_t idx = 0; idx < Threads[j].size(); ++idx)
+                    if (sp.slavesMask.test(idx) && Threads[j][idx]->activePosition)
+                        nodes += Threads[j][idx]->activePosition->nodes_searched();
 
-              sp.spinlock.release();
-          }
+                sp.spinlock.release();
+            }
 
       if (nodes >= Limits.nodes)
           Signals.stop = true;
