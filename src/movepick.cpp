@@ -310,4 +310,8 @@ top:
 
 void MovePicker::skip_quiet_moves() { skipQuiets = true; }
 
+void MovePicker::set_tt_move(Move newTTM) {
+    ttMove = newTTM;
+}
+
 }  // namespace Stockfish
