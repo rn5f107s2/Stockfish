@@ -50,7 +50,6 @@ class MovePicker {
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
     Move next_move();
     void skip_quiet_moves();
-    int get_non_history_value();
 
    private:
     template<typename Pred>
@@ -72,7 +71,7 @@ class MovePicker {
     int                          threshold;
     Depth                        depth;
     int                          ply;
-    bool                         skipQuiets = false;
+    bool                         skipQuiets = false, searchedSemiNoisy = false;
     ExtMove                      moves[MAX_MOVES];
 };
 

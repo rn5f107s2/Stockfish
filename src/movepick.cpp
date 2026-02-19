@@ -261,7 +261,15 @@ top:
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select([&]() { return cur->value > goodQuietThreshold; }))
+        if (select([&]() {
+            bool semiNoisy = cur->nonHistoryValue > 0;
+            bool allow     = !skipQuiets || (semiNoisy && !searchedSemiNoisy);
+
+            if (semiNoisy)
+                searchedSemiNoisy = true;
+
+            return allow && cur->value > goodQuietThreshold; 
+        }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad captures
@@ -312,7 +320,5 @@ top:
 }
 
 void MovePicker::skip_quiet_moves() { skipQuiets = true; }
-
-int MovePicker::get_non_history_value() { return !cur ? 0 : (cur - 1)->nonHistoryValue; }
 
 }  // namespace Stockfish
