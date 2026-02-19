@@ -50,6 +50,7 @@ class MovePicker {
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
     Move next_move();
     void skip_quiet_moves();
+    int get_non_history_value();
 
    private:
     template<typename Pred>
@@ -66,7 +67,7 @@ class MovePicker {
     const PieceToHistory**       continuationHistory;
     const SharedHistories*       sharedHistory;
     Move                         ttMove;
-    ExtMove *                    cur, *endCur, *endBadCaptures, *endCaptures, *endGenerated;
+    ExtMove *                    cur = nullptr, *endCur, *endBadCaptures, *endCaptures, *endGenerated;
     int                          stage;
     int                          threshold;
     Depth                        depth;

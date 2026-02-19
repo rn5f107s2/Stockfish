@@ -1032,6 +1032,8 @@ moves_loop:  // When in check, search starts here
         movedPiece = pos.moved_piece(move);
         givesCheck = pos.gives_check(move);
 
+        int nonHistoryValue = mp.get_non_history_value();
+
         // Calculate new depth for this move
         newDepth = depth - 1;
 
@@ -1081,7 +1083,8 @@ moves_loop:  // When in check, search starts here
             {
                 int history = (*contHist[0])[movedPiece][move.to_sq()]
                             + (*contHist[1])[movedPiece][move.to_sq()]
-                            + sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()];
+                            + sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()]
+                            + nonHistoryValue / 2;
 
                 // Continuation history based pruning
                 if (history < -3826 * depth)
