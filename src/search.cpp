@@ -139,7 +139,8 @@ void update_all_stats(const Position& pos,
                       SearchedList&   quietsSearched,
                       SearchedList&   capturesSearched,
                       Depth           depth,
-                      Move            ttMove);
+                      Move            ttMove,
+                      bool            bmPositiveNHV);
 
 bool is_shuffling(Move move, Stack* const ss, const Position& pos) {
     if (pos.capture_stage(move) || pos.rule50_count() < 11)
@@ -645,7 +646,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture;
+    bool  capture, ttCapture, bmPostiveNonHistoryValue;
     int   priorReduction;
     Piece movedPiece;
 
@@ -659,6 +660,7 @@ Value Search::Worker::search(
     ss->moveCount = 0;
     bestValue     = -VALUE_INFINITE;
     maxValue      = VALUE_INFINITE;
+    bmPostiveNonHistoryValue = false;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -1083,8 +1085,7 @@ moves_loop:  // When in check, search starts here
             {
                 int history = (*contHist[0])[movedPiece][move.to_sq()]
                             + (*contHist[1])[movedPiece][move.to_sq()]
-                            + sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()]
-                            + nonHistoryValue / 2;
+                            + sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()];
 
                 // Continuation history based pruning
                 if (history < -3826 * depth)
@@ -1365,6 +1366,7 @@ moves_loop:  // When in check, search starts here
             if (value + inc > alpha)
             {
                 bestMove = move;
+                bmPostiveNonHistoryValue = nonHistoryValue > 0;
 
                 if (PvNode && !rootNode)  // Update pv even in fail-high case
                     update_pv(ss->pv, move, (ss + 1)->pv);
@@ -1416,7 +1418,7 @@ moves_loop:  // When in check, search starts here
     else if (bestMove)
     {
         update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched, depth,
-                         ttData.move);
+                         ttData.move, bmPostiveNonHistoryValue);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 804 : -860);
     }
@@ -1824,7 +1826,8 @@ void update_all_stats(const Position& pos,
                       SearchedList&   quietsSearched,
                       SearchedList&   capturesSearched,
                       Depth           depth,
-                      Move            ttMove) {
+                      Move            ttMove,
+                      bool            bmPositiveNHV) {
 
     CapturePieceToHistory& captureHistory = workerThread.captureHistory;
     Piece                  movedPiece     = pos.moved_piece(bestMove);
@@ -1836,6 +1839,11 @@ void update_all_stats(const Position& pos,
 
     if (!pos.capture_stage(bestMove))
     {
+        if (bmPositiveNHV) {
+            bonus /= 2;
+            malus /= 2;
+        }
+
         update_quiet_histories(pos, ss, workerThread, bestMove, bonus * 810 / 1024);
 
         int actualMalus = malus * 1159 / 1024;
