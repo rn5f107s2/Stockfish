@@ -472,7 +472,7 @@ bool Search::Worker::iterative_deepening() {
         // A mated-in/TB-loss score from an aborted search cannot be trusted: the loss
         // could be delayed or refuted upon exploring the remaining root-moves.
         // Thus here we roll back to the score from the previous iteration.
-        else if (!pvIdx && rootMoves[0].score != -VALUE_INFINITE && is_loss(rootMoves[0].score))
+        else if (multiPV == 1 && rootMoves[0].score != -VALUE_INFINITE && is_loss(rootMoves[0].score))
         {
             // Bring the last best move to the front for best thread selection.
             if (!lastIterationPV.empty())
