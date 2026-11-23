@@ -768,7 +768,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture;
+    bool  capture, ttCapture, wouldFPNextDepth;
     int   priorReduction;
     Piece movedPiece;
 
@@ -1174,10 +1174,13 @@ moves_loop:  // When in check, search starts here
         movedPiece = pos.moved_piece(move);
         givesCheck = pos.gives_check(move);
 
+        wouldFPNextDepth = false;
+
         // Calculate new depth for this move
         newDepth = depth - 1;
 
-        int r = reduction(improving, depth, moveCount);
+        int r          = reduction(improving, depth, moveCount);
+        int rNextDepth = depth > 1 ? reduction(improving, depth - 1, moveCount) : r;
 
         // Decrease reduction for PvNodes
         if (PvNode)
@@ -1197,7 +1200,8 @@ moves_loop:  // When in check, search starts here
                 mp.skip_quiet_moves();
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r / 1024;
+            int lmrDepth     = newDepth - r / 1024;
+            int lmrDepthNext = newDepth - 1 - rNextDepth / 1024;
 
             if (capture || givesCheck)
             {
@@ -1207,11 +1211,16 @@ moves_loop:  // When in check, search starts here
                 // Futility pruning for captures
                 if (!givesCheck && lmrDepth < 8)
                 {
-                    Value futilityValue = ss->staticEval + 234 + 247 * lmrDepth
-                                        + PieceValue[capturedPiece] + 134 * captHist / 1024;
+                    const int futilityDepthMul = 247;
 
-                    if (futilityValue <= alpha)
+                    Value futilityValueBase = ss->staticEval + 234 + PieceValue[capturedPiece]
+                                            + 134 * captHist / 1024
+                                            + std::clamp(futilityHistory / 64, -128, 128);
+
+                    if (futilityValueBase + futilityDepthMul * lmrDepth <= alpha)
                         continue;
+
+                    wouldFPNextDepth = futilityValueBase + futilityDepthMul * lmrDepthNext <= alpha;
                 }
 
                 // SEE based pruning for captures and checks.
@@ -1557,6 +1566,10 @@ moves_loop:  // When in check, search starts here
                     // (*Scaler) Infrequent and small updates scale well
                     ss->cutoffCnt += (extension < 2) || PvNode;
                     assert(value >= beta);  // Fail high
+
+                    if (wouldFPNextDepth)
+                        futilityHistory << 400;
+
                     break;
                 }
 
@@ -1578,6 +1591,9 @@ moves_loop:  // When in check, search starts here
     // Step 23. Check for mate and stalemate, otherwise update bestmove/countermove stats
 
     assert(moveCount || !ss->inCheck || excludedMove || !MoveList<ALL>(pos).size());
+
+    if (bestValue <= alpha && depth > 3)
+        futilityHistory << -1;
 
     // Adjust best value for fail high cases
     if (bestValue >= beta && !is_decisive(bestValue) && !is_decisive(alpha))
